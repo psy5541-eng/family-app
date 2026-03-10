@@ -3,8 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/useAuth";
-import BiometricButton from "./BiometricButton";
+
+const BiometricButton = dynamic(() => import("./BiometricButton"), {
+  ssr: false,
+});
 
 export default function LoginForm() {
   const router = useRouter();
