@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 // 배포 URL (Cloudflare Pages 배포 후 실제 URL로 변경)
-const PRODUCTION_URL = "https://lifesync.pages.dev";
+const PRODUCTION_URL = "https://family-app-1x2.pages.dev";
 
 // 로컬 개발 테스트용 (PC와 폰이 같은 WiFi 필요)
 const DEV_URL = "http://192.168.20.33:3000";
