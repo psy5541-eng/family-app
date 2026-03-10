@@ -13,7 +13,8 @@
     "db:studio": "drizzle-kit studio",
     "build:apk": "CAPACITOR=true next build && npx cap sync android && npx cap open android",
     "cap:sync": "npx cap sync",
-    "cap:android": "npx cap open android"
+    "cap:android": "npx cap open android",
+    "build:cloudflare": "npx @opennextjs/cloudflare build && cp .open-next/worker.js .open-next/_worker.js && cp -r .open-next/assets/* .open-next/"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1005.0",
