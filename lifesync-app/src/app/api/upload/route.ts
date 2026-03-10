@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
-import { processFeedImage, processProfileImage } from "@/lib/utils/image";
 import { uploadToR2, generateMediaKey } from "@/lib/r2";
 import { isValidFileSize, isValidImageType, isValidVideoType } from "@/lib/utils/validation";
 
@@ -12,6 +11,30 @@ type UploadedFile = {
   key: string;
   type: "image" | "video";
 };
+
+/**
+ * 이미지 처리 (Sharp: 로컬 개발 전용)
+ * Worker 환경에서는 Sharp 사용 불가 → 원본 그대로 업로드
+ */
+async function processImageIfPossible(
+  arrayBuffer: ArrayBuffer,
+  purpose: string
+): Promise<{ buffer: Buffer | ArrayBuffer; contentType: string; ext: string }> {
+  if (process.env.NODE_ENV === "development") {
+    try {
+      const { processFeedImage, processProfileImage } = await import("@/lib/utils/image");
+      const processed =
+        purpose === "profile"
+          ? await processProfileImage(arrayBuffer)
+          : await processFeedImage(arrayBuffer);
+      return { buffer: processed.buffer, contentType: "image/webp", ext: "webp" };
+    } catch {
+      // Sharp 실패 시 원본 사용
+    }
+  }
+  // 프로덕션 (Worker): 원본 그대로 업로드
+  return { buffer: arrayBuffer, contentType: "image/jpeg", ext: "jpg" };
+}
 
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -72,24 +95,18 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
 
     if (isImage) {
-      // Sharp로 WebP 변환
-      const processed =
-        purpose === "profile"
-          ? await processProfileImage(arrayBuffer)
-          : await processFeedImage(arrayBuffer);
-
+      const { buffer, contentType, ext } = await processImageIfPossible(arrayBuffer, purpose);
       const key = generateMediaKey(
         purpose === "profile" ? "profiles" : "feeds",
-        user.id
+        user.id,
+        ext
       );
-
-      const { url } = await uploadToR2(processed.buffer, key, "image/webp");
+      const { url } = await uploadToR2(buffer, key, contentType);
       uploaded.push({ url, key, type: "image" });
     } else {
       // 영상: 그대로 업로드
       const key = generateMediaKey("feeds", user.id, "mp4");
-      const buffer = Buffer.from(arrayBuffer);
-      const { url } = await uploadToR2(buffer, key, file.type);
+      const { url } = await uploadToR2(arrayBuffer, key, file.type);
       uploaded.push({ url, key, type: "video" });
     }
   }
