@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server"
-import { schema } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 import { requireAuth } from "@/lib/auth/session";
 
 // GET /api/calendar/dday  - D-day 일정 목록 (최대 10개, 날짜순)

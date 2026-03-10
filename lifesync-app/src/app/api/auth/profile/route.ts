@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server"
-import { schema } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 import { requireAuth } from "@/lib/auth/session";
 import { isValidNickname } from "@/lib/utils/validation";
 

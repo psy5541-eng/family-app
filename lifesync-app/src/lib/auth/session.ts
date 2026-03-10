@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server";
+import * as schema from "@/lib/db/schema";
 import type { User } from "@/types/db";
 
 const SESSION_COOKIE = "lifesync-session";
@@ -24,7 +25,7 @@ function extractToken(request?: Request): string | null {
  * 토큰으로 사용자 조회 (세션 유효성 검사 포함)
  */
 async function getUserByToken(token: string): Promise<User | null> {
-  const db = getLocalDb();
+  const db = getServerDb();
   const now = new Date();
 
   const rows = await db
@@ -42,7 +43,7 @@ async function getUserByToken(token: string): Promise<User | null> {
     .from(schema.sessions)
     .where(eq(schema.sessions.token, token))
     .limit(1)
-    .then((r) => r[0]);
+    .then((r: { expiresAt: Date }[]) => r[0]);
 
   if (!session || session.expiresAt < now) return null;
 
@@ -95,7 +96,7 @@ export async function requireAuth(
  * 세션 토큰 생성 (로그인 시 사용)
  */
 export async function createSession(userId: string): Promise<string> {
-  const db = getLocalDb();
+  const db = getServerDb();
   const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30일
@@ -115,7 +116,7 @@ export async function createSession(userId: string): Promise<string> {
  * 세션 삭제 (로그아웃 시 사용)
  */
 export async function deleteSession(token: string): Promise<void> {
-  const db = getLocalDb();
+  const db = getServerDb();
   await db.delete(schema.sessions).where(eq(schema.sessions.token, token));
 }
 

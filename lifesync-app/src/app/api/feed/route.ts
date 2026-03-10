@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq, desc, lt, sql, isNotNull } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server"
-import { schema } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 import { requireAuth, getCurrentUser } from "@/lib/auth/session";
 import { sendMulticastPush } from "@/lib/fcm/server";
 import type { FeedWithRelations, FeedMedia } from "@/types/db";

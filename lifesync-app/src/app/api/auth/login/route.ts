@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server"
-import { schema } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 import { createSession } from "@/lib/auth/session";
 import {
   checkLoginAttempt,
