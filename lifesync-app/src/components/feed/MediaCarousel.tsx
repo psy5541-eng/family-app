@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import type { FeedMedia } from "@/types/db";
 
@@ -8,26 +7,9 @@ type MediaCarouselProps = {
   media: FeedMedia[];
 };
 
-// R2 프로덕션 URL인지 확인 (next/image 최적화 대상)
-function isRemoteUrl(url: string) {
-  return url.startsWith("https://");
-}
-
 function MediaImage({ src, alt }: { src: string; alt: string }) {
-  if (isRemoteUrl(src)) {
-    return (
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        className="object-cover"
-        sizes="(max-width: 768px) 100vw, 600px"
-      />
-    );
-  }
-  // 로컬 개발 URL (/api/media/...) → 일반 img 사용
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className="absolute inset-0 w-full h-full object-cover" />;
+  return <img src={src} alt={alt} className="w-full h-auto block" />;
 }
 
 export default function MediaCarousel({ media }: MediaCarouselProps) {
@@ -39,11 +21,11 @@ export default function MediaCarousel({ media }: MediaCarouselProps) {
   if (media.length === 1) {
     const item = media[0];
     return (
-      <div className="relative w-full aspect-square bg-black">
+      <div className="w-full bg-black">
         {item.mediaType === "video" ? (
           <video
             src={item.mediaUrl}
-            className="w-full h-full object-contain"
+            className="w-full h-auto"
             controls
             playsInline
           />
@@ -68,12 +50,12 @@ export default function MediaCarousel({ media }: MediaCarouselProps) {
         {media.map((item) => (
           <div
             key={item.id}
-            className="scroll-snap-start flex-shrink-0 w-full aspect-square relative bg-black"
+            className="scroll-snap-start flex-shrink-0 w-full bg-black"
           >
             {item.mediaType === "video" ? (
               <video
                 src={item.mediaUrl}
-                className="w-full h-full object-contain"
+                className="w-full h-auto"
                 controls
                 playsInline
               />

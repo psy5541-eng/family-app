@@ -23,11 +23,39 @@ const DEFAULT_SYMBOLS = [
   { symbol: "TSLA",      name: "Tesla",    currency: "USD", type: "stock" as const },
 ];
 
-// KOSPI/KOSDAQ 지수 (Alpha Vantage 미지원 → 항상 mock)
-const INDEX_MOCK: StockItem[] = [
-  { symbol: "KOSPI",  name: "KOSPI",  price: 2648.12, change: 15.43,  changePercent: 0.59,  currency: "KRW", type: "index" },
-  { symbol: "KOSDAQ", name: "KOSDAQ", price: 857.34,  change: -3.21,  changePercent: -0.37, currency: "KRW", type: "index" },
-];
+// KOSPI/KOSDAQ 지수
+// Alpha Vantage는 한국 지수 미지원. 네이버 금융 스크래핑으로 실시간 데이터 제공
+async function fetchKoreanIndices(): Promise<StockItem[]> {
+  try {
+    const res = await fetch("https://m.stock.naver.com/api/index/KOSPI/basic", { next: { revalidate: 300 } });
+    const kospi = await res.json();
+    const res2 = await fetch("https://m.stock.naver.com/api/index/KOSDAQ/basic", { next: { revalidate: 300 } });
+    const kosdaq = await res2.json();
+
+    return [
+      {
+        symbol: "KOSPI", name: "KOSPI",
+        price: parseFloat(kospi.closePrice?.replace(/,/g, "")) || 0,
+        change: parseFloat(kospi.compareToPreviousClosePrice?.replace(/,/g, "")) || 0,
+        changePercent: parseFloat(kospi.fluctuationsRatio?.replace(/,/g, "")) || 0,
+        currency: "KRW", type: "index",
+      },
+      {
+        symbol: "KOSDAQ", name: "KOSDAQ",
+        price: parseFloat(kosdaq.closePrice?.replace(/,/g, "")) || 0,
+        change: parseFloat(kosdaq.compareToPreviousClosePrice?.replace(/,/g, "")) || 0,
+        changePercent: parseFloat(kosdaq.fluctuationsRatio?.replace(/,/g, "")) || 0,
+        currency: "KRW", type: "index",
+      },
+    ];
+  } catch {
+    // 실패 시 fallback mock
+    return [
+      { symbol: "KOSPI",  name: "KOSPI",  price: 2648.12, change: 15.43,  changePercent: 0.59,  currency: "KRW", type: "index" },
+      { symbol: "KOSDAQ", name: "KOSDAQ", price: 857.34,  change: -3.21,  changePercent: -0.37, currency: "KRW", type: "index" },
+    ];
+  }
+}
 
 // GET /api/stock?symbols=005930.KS,AAPL&includeIndex=true
 export async function GET(request: NextRequest) {
@@ -47,7 +75,8 @@ export async function GET(request: NextRequest) {
     ];
     const filteredMock: StockItem[] = stockMock.filter((i) => requested.includes(i.symbol));
 
-    const items: StockItem[] = includeIndex ? [...INDEX_MOCK, ...filteredMock] : filteredMock;
+    const indices = includeIndex ? await fetchKoreanIndices() : [];
+    const items: StockItem[] = [...indices, ...filteredMock];
     return Response.json({
       success: true,
       data: { items, updatedAt: new Date().toISOString() },
@@ -56,7 +85,8 @@ export async function GET(request: NextRequest) {
 
   // Alpha Vantage - 글로벌 시세 (GLOBAL_QUOTE)
   try {
-    const results: StockItem[] = includeIndex ? [...INDEX_MOCK] : [];
+    const indices = includeIndex ? await fetchKoreanIndices() : [];
+    const results: StockItem[] = [...indices];
 
     for (const symbol of requested.slice(0, 5)) {
       const meta = DEFAULT_SYMBOLS.find((s) => s.symbol === symbol);

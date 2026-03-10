@@ -38,13 +38,52 @@ export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailCheck, setEmailCheck] = useState<{ checking: boolean; available: boolean | null }>({ checking: false, available: null });
+  const [nicknameCheck, setNicknameCheck] = useState<{ checking: boolean; available: boolean | null }>({ checking: false, available: null });
+  const emailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nicknameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const passwordStrength = form.password ? getPasswordStrength(form.password) : null;
   const strengthConfig = passwordStrength ? STRENGTH_CONFIG[passwordStrength] : null;
 
+  async function checkDuplicate(field: "email" | "nickname", value: string) {
+    try {
+      const res = await fetch(`/api/auth/check?${field}=${encodeURIComponent(value)}`);
+      const json = await res.json();
+      if (json.success) {
+        if (field === "email") setEmailCheck({ checking: false, available: json.data.available });
+        else setNicknameCheck({ checking: false, available: json.data.available });
+      }
+    } catch {
+      if (field === "email") setEmailCheck({ checking: false, available: null });
+      else setNicknameCheck({ checking: false, available: null });
+    }
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
     setError(null);
+
+    // 이메일 실시간 중복체크 (debounce 500ms)
+    if (name === "email") {
+      setEmailCheck({ checking: false, available: null });
+      if (emailTimerRef.current) clearTimeout(emailTimerRef.current);
+      if (value.includes("@") && value.includes(".")) {
+        setEmailCheck({ checking: true, available: null });
+        emailTimerRef.current = setTimeout(() => checkDuplicate("email", value), 500);
+      }
+    }
+
+    // 닉네임 실시간 중복체크 (debounce 500ms)
+    if (name === "nickname") {
+      setNicknameCheck({ checking: false, available: null });
+      if (nicknameTimerRef.current) clearTimeout(nicknameTimerRef.current);
+      if (value.length >= 2) {
+        setNicknameCheck({ checking: true, available: null });
+        nicknameTimerRef.current = setTimeout(() => checkDuplicate("nickname", value), 500);
+      }
+    }
   }
 
   function handleProfileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -180,8 +219,21 @@ export default function RegisterForm() {
             placeholder="example@email.com"
             autoComplete="email"
             required
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
+            className={`w-full px-4 py-3 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition ${
+              emailCheck.available === false ? "border-red-400" :
+              emailCheck.available === true ? "border-green-400" :
+              "border-gray-200 dark:border-gray-700"
+            }`}
           />
+          {emailCheck.checking && (
+            <p className="text-xs text-gray-400 mt-1">확인 중...</p>
+          )}
+          {emailCheck.available === true && (
+            <p className="text-xs text-green-500 mt-1">사용 가능한 이메일입니다.</p>
+          )}
+          {emailCheck.available === false && (
+            <p className="text-xs text-red-500 mt-1">이미 사용 중인 이메일입니다.</p>
+          )}
         </div>
 
         {/* 닉네임 */}
@@ -197,8 +249,21 @@ export default function RegisterForm() {
             required
             minLength={2}
             maxLength={20}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
+            className={`w-full px-4 py-3 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition ${
+              nicknameCheck.available === false ? "border-red-400" :
+              nicknameCheck.available === true ? "border-green-400" :
+              "border-gray-200 dark:border-gray-700"
+            }`}
           />
+          {nicknameCheck.checking && (
+            <p className="text-xs text-gray-400 mt-1">확인 중...</p>
+          )}
+          {nicknameCheck.available === true && (
+            <p className="text-xs text-green-500 mt-1">사용 가능한 닉네임입니다.</p>
+          )}
+          {nicknameCheck.available === false && (
+            <p className="text-xs text-red-500 mt-1">이미 사용 중인 닉네임입니다.</p>
+          )}
         </div>
 
         {/* 비밀번호 */}
