@@ -104,6 +104,8 @@ export const calendarEvents = sqliteTable("calendar_events", {
   longitude: text("longitude"),
   naverPlaceId: text("naver_place_id"),
   notifyBefore: integer("notify_before"), // 분 단위
+  isShared: integer("is_shared", { mode: "boolean" }).default(false),
+  color: text("color").default("primary"), // primary | rose | amber | emerald | violet
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

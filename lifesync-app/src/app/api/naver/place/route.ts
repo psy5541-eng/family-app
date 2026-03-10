@@ -1,9 +1,5 @@
 import { NextRequest } from "next/server";
 
-// NCP (Naver Cloud Platform) Maps API 키
-const NCP_KEY_ID = process.env.NAVER_MAP_CLIENT_ID;
-const NCP_KEY = process.env.NAVER_MAP_CLIENT_SECRET;
-
 type GeoAddress = {
   roadAddress: string;
   jibunAddress: string;
@@ -21,48 +17,54 @@ export async function GET(request: NextRequest) {
     return Response.json({ success: false, error: "검색어를 입력해주세요." }, { status: 400 });
   }
 
-  // NCP API 키 미설정 시 mock 데이터 반환
-  if (!NCP_KEY_ID || NCP_KEY_ID.includes("your_naver")) {
-    const mockItems = [
-      {
-        id: "mock-1",
-        name: query + " 카페",
-        address: "서울특별시 강남구 테헤란로 123",
-        roadAddress: "서울특별시 강남구 테헤란로 123",
-        latitude: "37.5000",
-        longitude: "127.0000",
-        category: "",
+  // Cloudflare Workers에서 env var는 요청 시점에 읽어야 안정적
+  const NCP_KEY_ID = process.env.NAVER_MAP_CLIENT_ID;
+  const NCP_KEY = process.env.NAVER_MAP_CLIENT_SECRET;
+
+  if (!NCP_KEY_ID || !NCP_KEY) {
+    console.error("NCP API keys not found:", { hasId: !!NCP_KEY_ID, hasKey: !!NCP_KEY });
+    return Response.json({
+      success: true,
+      data: {
+        items: [{
+          id: "mock-1",
+          name: query,
+          address: "API 키가 설정되지 않았습니다",
+          roadAddress: "환경변수를 확인해주세요",
+          latitude: "37.5000",
+          longitude: "127.0000",
+          category: "",
+        }],
       },
-      {
-        id: "mock-2",
-        name: query + " 레스토랑",
-        address: "서울특별시 강남구 역삼동 456",
-        roadAddress: "서울특별시 강남구 강남대로 456",
-        latitude: "37.5010",
-        longitude: "127.0010",
-        category: "",
-      },
-    ];
-    return Response.json({ success: true, data: { items: mockItems } });
+    });
   }
 
   try {
-    // NCP Geocoding API 사용 (NCP 키로 인증)
     const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}`;
     const res = await fetch(url, {
       headers: {
         "X-NCP-APIGW-API-KEY-ID": NCP_KEY_ID,
-        "X-NCP-APIGW-API-KEY": NCP_KEY!,
+        "X-NCP-APIGW-API-KEY": NCP_KEY,
       },
     });
 
     if (!res.ok) {
       const text = await res.text();
       console.error("NCP Geocoding error:", res.status, text);
-      return Response.json({ success: false, error: "장소 검색에 실패했습니다." }, { status: 502 });
+      return Response.json({ success: false, error: `장소 검색 실패 (${res.status})` }, { status: 502 });
     }
 
     const json = await res.json() as { status: string; addresses: GeoAddress[] };
+
+    if (!json.addresses || json.addresses.length === 0) {
+      return Response.json({
+        success: true,
+        data: {
+          items: [],
+          message: "검색 결과가 없습니다. 도로명/지번 주소로 검색해보세요.",
+        },
+      });
+    }
 
     const items = json.addresses.map((addr, i) => ({
       id: `ncp-${i}-${addr.x}-${addr.y}`,

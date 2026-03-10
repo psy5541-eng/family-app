@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { eq, and, gte, lt, isNotNull } from "drizzle-orm";
+import { eq, and, or, gte, lt, lte, isNotNull } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server"
 import * as schema from "@/lib/db/schema";
 import { requireAuth } from "@/lib/auth/session";
@@ -21,14 +21,49 @@ export async function GET(request: NextRequest) {
   const startOfMonth = new Date(year, month - 1, 1);
   const startOfNextMonth = new Date(year, month, 1);
 
+  // 내 일정 + 공유된 일정 (startDate가 이 달에 포함되거나, endDate가 이 달에 걸치는 일정)
   const events = await db
-    .select()
+    .select({
+      id: schema.calendarEvents.id,
+      userId: schema.calendarEvents.userId,
+      title: schema.calendarEvents.title,
+      description: schema.calendarEvents.description,
+      startDate: schema.calendarEvents.startDate,
+      endDate: schema.calendarEvents.endDate,
+      isAllDay: schema.calendarEvents.isAllDay,
+      isDday: schema.calendarEvents.isDday,
+      placeName: schema.calendarEvents.placeName,
+      placeAddress: schema.calendarEvents.placeAddress,
+      latitude: schema.calendarEvents.latitude,
+      longitude: schema.calendarEvents.longitude,
+      naverPlaceId: schema.calendarEvents.naverPlaceId,
+      notifyBefore: schema.calendarEvents.notifyBefore,
+      isShared: schema.calendarEvents.isShared,
+      color: schema.calendarEvents.color,
+      createdAt: schema.calendarEvents.createdAt,
+      updatedAt: schema.calendarEvents.updatedAt,
+      ownerNickname: schema.users.nickname,
+      ownerProfileImage: schema.users.profileImage,
+    })
     .from(schema.calendarEvents)
+    .leftJoin(schema.users, eq(schema.calendarEvents.userId, schema.users.id))
     .where(
       and(
-        eq(schema.calendarEvents.userId, user.id),
-        gte(schema.calendarEvents.startDate, startOfMonth),
-        lt(schema.calendarEvents.startDate, startOfNextMonth)
+        or(
+          eq(schema.calendarEvents.userId, user.id),
+          eq(schema.calendarEvents.isShared, true)
+        ),
+        // startDate가 이 달 범위이거나, endDate가 이 달에 걸치는 일정
+        or(
+          and(
+            gte(schema.calendarEvents.startDate, startOfMonth),
+            lt(schema.calendarEvents.startDate, startOfNextMonth)
+          ),
+          and(
+            lte(schema.calendarEvents.startDate, startOfNextMonth),
+            gte(schema.calendarEvents.endDate, startOfMonth)
+          )
+        )
       )
     )
     .orderBy(schema.calendarEvents.startDate);
@@ -56,6 +91,8 @@ export async function POST(request: NextRequest) {
     longitude?: string;
     naverPlaceId?: string;
     notifyBefore?: number;
+    isShared?: boolean;
+    color?: string;
   };
 
   if (!body.title?.trim()) {
@@ -83,6 +120,8 @@ export async function POST(request: NextRequest) {
     longitude: body.longitude ?? null,
     naverPlaceId: body.naverPlaceId ?? null,
     notifyBefore: body.notifyBefore ?? null,
+    isShared: body.isShared ?? false,
+    color: body.color ?? "primary",
     createdAt: now,
     updatedAt: now,
   });

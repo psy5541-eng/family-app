@@ -120,4 +120,21 @@ export async function deleteSession(token: string): Promise<void> {
   await db.delete(schema.sessions).where(eq(schema.sessions.token, token));
 }
 
+/**
+ * 관리자 권한 필요 API에서 사용 - 일반 사용자는 403 반환
+ */
+export async function requireAdmin(
+  request: Request
+): Promise<{ user: User } | Response> {
+  const result = await requireAuth(request);
+  if (result instanceof Response) return result;
+  if (result.user.role !== "admin") {
+    return Response.json(
+      { success: false, error: "관리자 권한이 필요합니다." },
+      { status: 403 }
+    );
+  }
+  return result;
+}
+
 export { SESSION_COOKIE };

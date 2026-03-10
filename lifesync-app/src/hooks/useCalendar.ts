@@ -36,6 +36,8 @@ export type EventFormData = {
   longitude?: string;
   naverPlaceId?: string;
   notifyBefore?: number;
+  isShared?: boolean;
+  color?: string;
 };
 
 export function useCalendar(): UseCalendarReturn {
@@ -170,13 +172,20 @@ export function useCalendar(): UseCalendarReturn {
   }, [getAuthHeader, loadEvents]);
 
   const getEventsForDate = useCallback((date: Date): CalendarEvent[] => {
+    const targetStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const targetEnd = targetStart + 86400000 - 1; // 해당 날짜 23:59:59.999
+
     return events.filter((e) => {
-      const d = e.startDate instanceof Date ? e.startDate : new Date(e.startDate);
-      return (
-        d.getFullYear() === date.getFullYear() &&
-        d.getMonth() === date.getMonth() &&
-        d.getDate() === date.getDate()
-      );
+      const eStart = (e.startDate instanceof Date ? e.startDate : new Date(e.startDate)).getTime();
+      const eEnd = e.endDate
+        ? (e.endDate instanceof Date ? e.endDate : new Date(e.endDate)).getTime()
+        : eStart;
+
+      // 날짜 단위 비교: startDate~endDate 범위가 target 날짜에 걸치는지
+      const eStartDay = new Date(new Date(eStart).getFullYear(), new Date(eStart).getMonth(), new Date(eStart).getDate()).getTime();
+      const eEndDay = new Date(new Date(eEnd).getFullYear(), new Date(eEnd).getMonth(), new Date(eEnd).getDate()).getTime();
+
+      return eStartDay <= targetStart && eEndDay >= targetStart;
     });
   }, [events]);
 

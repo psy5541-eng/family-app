@@ -45,6 +45,8 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
   const [longitude, setLongitude] = useState(event?.longitude ?? "");
   const [naverPlaceId, setNaverPlaceId] = useState(event?.naverPlaceId ?? "");
   const [notifyBefore, setNotifyBefore] = useState<number | "">(event?.notifyBefore ?? "");
+  const [isShared, setIsShared] = useState(event?.isShared ?? false);
+  const [color, setColor] = useState(event?.color ?? "primary");
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -87,6 +89,8 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
         longitude: longitude || undefined,
         naverPlaceId: naverPlaceId || undefined,
         notifyBefore: notifyBefore !== "" ? notifyBefore : undefined,
+        isShared,
+        color,
       });
     } catch {
       setError("저장에 실패했습니다.");
@@ -156,6 +160,41 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
                 </div>
                 <span className="text-sm text-gray-700 dark:text-gray-300">D-day</span>
               </label>
+            </div>
+
+            {/* 공유 토글 */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <div
+                onClick={() => setIsShared((v) => !v)}
+                className={`w-10 h-5 rounded-full transition-colors relative ${isShared ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-600"}`}
+              >
+                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${isShared ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+              <span className="text-sm text-gray-700 dark:text-gray-300">공유 일정</span>
+              {isShared && <span className="text-xs text-blue-500">모든 사용자에게 표시됩니다</span>}
+            </label>
+
+            {/* 색상 선택 */}
+            <div className="space-y-1.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400">색상</p>
+              <div className="flex gap-2">
+                {([
+                  { key: "primary", bg: "bg-primary-500", ring: "ring-primary-500" },
+                  { key: "rose", bg: "bg-rose-500", ring: "ring-rose-500" },
+                  { key: "amber", bg: "bg-amber-500", ring: "ring-amber-500" },
+                  { key: "emerald", bg: "bg-emerald-500", ring: "ring-emerald-500" },
+                  { key: "violet", bg: "bg-violet-500", ring: "ring-violet-500" },
+                ] as const).map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setColor(c.key)}
+                    className={`w-7 h-7 rounded-full ${c.bg} transition-all ${
+                      color === c.key ? `ring-2 ${c.ring} ring-offset-2 dark:ring-offset-gray-800 scale-110` : "opacity-60 hover:opacity-100"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* 날짜/시간 */}

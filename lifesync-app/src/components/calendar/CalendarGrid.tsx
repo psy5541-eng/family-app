@@ -13,14 +13,13 @@ type CalendarGridProps = {
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-const BAR_COLORS = [
-  { bg: "bg-primary-200 dark:bg-primary-800/60", text: "text-primary-700 dark:text-primary-300" },
-  { bg: "bg-rose-200 dark:bg-rose-800/60", text: "text-rose-700 dark:text-rose-300" },
-  { bg: "bg-amber-200 dark:bg-amber-800/60", text: "text-amber-700 dark:text-amber-300" },
-  { bg: "bg-emerald-200 dark:bg-emerald-800/60", text: "text-emerald-700 dark:text-emerald-300" },
-  { bg: "bg-violet-200 dark:bg-violet-800/60", text: "text-violet-700 dark:text-violet-300" },
-  { bg: "bg-sky-200 dark:bg-sky-800/60", text: "text-sky-700 dark:text-sky-300" },
-];
+const COLOR_MAP: Record<string, { bg: string; text: string; dot: string }> = {
+  primary: { bg: "bg-primary-200 dark:bg-primary-800/60", text: "text-primary-700 dark:text-primary-300", dot: "bg-primary-400" },
+  rose: { bg: "bg-rose-200 dark:bg-rose-800/60", text: "text-rose-700 dark:text-rose-300", dot: "bg-rose-400" },
+  amber: { bg: "bg-amber-200 dark:bg-amber-800/60", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-400" },
+  emerald: { bg: "bg-emerald-200 dark:bg-emerald-800/60", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-400" },
+  violet: { bg: "bg-violet-200 dark:bg-violet-800/60", text: "text-violet-700 dark:text-violet-300", dot: "bg-violet-400" },
+};
 
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -30,10 +29,9 @@ function toDate(d: Date | string): Date {
   return d instanceof Date ? d : new Date(d);
 }
 
-function getBarColor(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
-  return BAR_COLORS[Math.abs(hash) % BAR_COLORS.length];
+function getEventColor(event: CalendarEvent) {
+  const colorKey = (event as CalendarEvent & { color?: string }).color ?? "primary";
+  return COLOR_MAP[colorKey] ?? COLOR_MAP.primary;
 }
 
 // 기간 일정인지 (endDate가 있고 startDate와 다른 날)
@@ -215,7 +213,7 @@ export default function CalendarGrid({
                     ) : dots.length > 0 ? (
                       <div className="flex gap-0.5">
                         {dots.slice(0, 3).map((e) => (
-                          <div key={e.id} className="w-1 h-1 rounded-full bg-primary-400" />
+                          <div key={e.id} className={`w-1 h-1 rounded-full ${getEventColor(e).dot}`} />
                         ))}
                         {dots.length > 3 && <div className="w-1 h-1 rounded-full bg-gray-400" />}
                       </div>
@@ -227,7 +225,7 @@ export default function CalendarGrid({
 
             {/* C7: From-To 색상 바 오버레이 */}
             {bars.map((bar) => {
-              const color = getBarColor(bar.event.id);
+              const color = getEventColor(bar.event);
               const left = `${(bar.startCol / 7) * 100}%`;
               const width = `${((bar.endCol - bar.startCol + 1) / 7) * 100}%`;
               const top = 36 + bar.slot * 18;

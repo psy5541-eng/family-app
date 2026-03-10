@@ -15,6 +15,13 @@
       "when": 1773200000000,
       "tag": "0001_comment_replies_likes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773300000000,
+      "tag": "0002_calendar_shared_color",
+      "breakpoints": true
     }
   ]
 }

@@ -1,20 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+
+const MAIN_TABS = ["/dashboard", "/feed", "/calendar", "/settings"];
 
 /**
- * Android 뒤로가기 버튼 2회 누르면 앱 종료
- * - 첫 번째: 토스트 표시
+ * Android 뒤로가기 버튼 처리
+ * - Capacitor server URL 모드에서는 WebView가 히스토리 관리
+ * - popstate + history guard로 메인 탭 뒤로가기 인터셉트
+ * - 메인 탭 첫 번째 뒤로가기: 토스트
  * - 2초 내 두 번째: 앱 종료
  */
 export function useBackButton() {
-  const router = useRouter();
+  const pathname = usePathname();
   const lastBackRef = useRef(0);
   const toastRef = useRef<HTMLDivElement | null>(null);
+  const guardPushedRef = useRef(false);
+  const appRef = useRef<{ exitApp: () => void; minimizeApp: () => void } | null>(null);
 
   const showToast = useCallback(() => {
-    // 이미 떠있으면 제거
     if (toastRef.current) {
       toastRef.current.remove();
       toastRef.current = null;
@@ -36,51 +41,91 @@ export function useBackButton() {
     }, 2000);
   }, []);
 
+  // 메인 탭에 진입할 때마다 history guard를 push
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
+    const isMainTab = MAIN_TABS.includes(pathname);
+    if (isMainTab && !guardPushedRef.current) {
+      // guard state를 push → 뒤로가기 시 popstate가 발생하고 이 guard가 pop됨
+      window.history.pushState({ backGuard: true }, "");
+      guardPushedRef.current = true;
+    }
+    if (!isMainTab) {
+      guardPushedRef.current = false;
+    }
+  }, [pathname]);
 
-    async function setup() {
+  // popstate로 뒤로가기 감지 (WebView 히스토리 기반)
+  useEffect(() => {
+    function handlePopState(e: PopStateEvent) {
+      const isMainTab = MAIN_TABS.includes(window.location.pathname);
+
+      if (!isMainTab) {
+        // 메인 탭이 아니면 기본 브라우저 뒤로가기 동작 허용
+        return;
+      }
+
+      // 메인 탭에서 뒤로가기: guard를 다시 push하고 종료 판단
+      window.history.pushState({ backGuard: true }, "");
+      guardPushedRef.current = true;
+
+      const now = Date.now();
+      if (now - lastBackRef.current < 2000) {
+        // 2초 내 두 번째 → 앱 종료
+        if (appRef.current) {
+          appRef.current.exitApp();
+        }
+        return;
+      }
+
+      lastBackRef.current = now;
+      showToast();
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [showToast]);
+
+  // Capacitor App 플러그인 로드 (exitApp 용)
+  useEffect(() => {
+    async function loadApp() {
       try {
         const { App } = await import("@capacitor/app");
+        appRef.current = App;
 
+        // Capacitor backButton 이벤트도 등록 (히스토리가 없을 때 발생)
         const listener = await App.addListener("backButton", () => {
-          const now = Date.now();
+          const isMainTab = MAIN_TABS.includes(window.location.pathname);
 
-          // 메인 탭 경로 (이 화면들에서는 뒤로갈 곳이 없음)
-          const mainTabs = ["/dashboard", "/feed", "/calendar", "/settings"];
-          const isMainTab = mainTabs.includes(window.location.pathname);
-
-          // 메인 탭이 아니면 히스토리 뒤로가기
           if (!isMainTab) {
-            router.back();
+            window.history.back();
             return;
           }
 
-          // 메인 탭: 2초 내 두 번째 뒤로가기 → 앱 종료
+          const now = Date.now();
           if (now - lastBackRef.current < 2000) {
             App.exitApp();
             return;
           }
 
-          // 첫 번째 뒤로가기 → 토스트
           lastBackRef.current = now;
           showToast();
         });
 
-        cleanup = () => listener.remove();
+        return () => listener.remove();
       } catch {
-        // 웹 환경에서는 Capacitor App 플러그인 없으므로 무시
+        // 웹 환경에서는 Capacitor 없음
       }
     }
 
-    setup();
+    let cleanupFn: (() => void) | undefined;
+    loadApp().then((fn) => { cleanupFn = fn; });
 
     return () => {
-      cleanup?.();
+      cleanupFn?.();
       if (toastRef.current) {
         toastRef.current.remove();
         toastRef.current = null;
       }
     };
-  }, [router, showToast]);
+  }, [showToast]);
 }

@@ -5,12 +5,22 @@ import CalendarGrid from "@/components/calendar/CalendarGrid";
 import EventListView from "@/components/calendar/EventListView";
 import EventModal from "@/components/calendar/EventModal";
 import { useCalendar } from "@/hooks/useCalendar";
+import { useAuth } from "@/hooks/useAuth";
 import type { CalendarEvent } from "@/types/db";
 import { calcDday, formatEventDate } from "@/lib/utils/date";
+
+const COLOR_DOT_MAP: Record<string, string> = {
+  primary: "bg-primary-500",
+  rose: "bg-rose-500",
+  amber: "bg-amber-500",
+  emerald: "bg-emerald-500",
+  violet: "bg-violet-500",
+};
 
 type ViewMode = "calendar" | "list";
 
 export default function CalendarPage() {
+  const { user } = useAuth();
   const {
     events,
     isLoading,
@@ -204,48 +214,66 @@ export default function CalendarPage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {selectedEvents.map((event) => (
-                          <button
-                            key={event.id}
-                            onClick={() => openEdit(event)}
-                            className="w-full text-left bg-white dark:bg-gray-800 rounded-xl px-4 py-3 shadow-sm border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 transition-colors"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                    {event.title}
-                                  </p>
-                                  {event.isDday && (
-                                    <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-md flex-shrink-0">
-                                      {calcDday(event.startDate)}
-                                    </span>
+                        {selectedEvents.map((event) => {
+                          const ev = event as CalendarEvent & { ownerNickname?: string; isShared?: boolean; color?: string };
+                          const isOwner = event.userId === user?.id;
+                          const colorKey = ev.color ?? "primary";
+                          return (
+                            <button
+                              key={event.id}
+                              onClick={() => isOwner ? openEdit(event) : undefined}
+                              className={`w-full text-left bg-white dark:bg-gray-800 rounded-xl px-4 py-3 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors ${
+                                isOwner ? "hover:border-primary-200 dark:hover:border-primary-700 cursor-pointer" : "cursor-default"
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${COLOR_DOT_MAP[colorKey] ?? "bg-primary-500"}`} />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                      {event.title}
+                                    </p>
+                                    {event.isDday && (
+                                      <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-md flex-shrink-0">
+                                        {calcDday(event.startDate)}
+                                      </span>
+                                    )}
+                                    {ev.isShared && (
+                                      <span className="text-[10px] text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                        공유
+                                      </span>
+                                    )}
+                                  </div>
+                                  {event.isAllDay ? (
+                                    <p className="text-xs text-primary-500 mt-0.5">종일</p>
+                                  ) : (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                      {formatEventDate(event.startDate)}
+                                      {event.endDate && ` ~ ${formatEventDate(event.endDate)}`}
+                                    </p>
+                                  )}
+                                  {event.placeName && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                                      </svg>
+                                      <p className="text-xs text-gray-400 truncate">{event.placeName}</p>
+                                    </div>
+                                  )}
+                                  {!isOwner && ev.ownerNickname && (
+                                    <p className="text-[10px] text-gray-400 mt-1">{ev.ownerNickname}님의 일정</p>
                                   )}
                                 </div>
-                                {event.isAllDay ? (
-                                  <p className="text-xs text-primary-500 mt-0.5">종일</p>
-                                ) : (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    {formatEventDate(event.startDate)}
-                                    {event.endDate && ` ~ ${formatEventDate(event.endDate)}`}
-                                  </p>
-                                )}
-                                {event.placeName && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                                    </svg>
-                                    <p className="text-xs text-gray-400 truncate">{event.placeName}</p>
-                                  </div>
+                                {isOwner && (
+                                  <svg className="w-4 h-4 text-gray-300 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                  </svg>
                                 )}
                               </div>
-                              <svg className="w-4 h-4 text-gray-300 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                              </svg>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -281,7 +309,7 @@ export default function CalendarPage() {
           date={selectedDate ?? new Date()}
           event={editingEvent}
           onSave={handleSave}
-          onDelete={editingEvent ? handleDelete : undefined}
+          onDelete={editingEvent && editingEvent.userId === user?.id ? handleDelete : undefined}
           onClose={() => setShowModal(false)}
         />
       )}

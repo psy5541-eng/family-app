@@ -209,7 +209,7 @@ function CommentSection({
   useEffect(() => {
     if (loaded) return;
     async function loadComments() {
-      const res = await fetch(`/api/feed/${feedId}/comments`);
+      const res = await fetch(`/api/feed/${feedId}/comments`, { headers: getAuthHeader() });
       const json = await res.json();
       if (json.success) {
         const all: CommentData[] = json.data.comments.map((c: CommentData) => ({

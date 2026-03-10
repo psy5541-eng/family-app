@@ -16,8 +16,6 @@ export default function SettingsPage() {
   const [profilePreview, setProfilePreview] = useState<string | null>(user?.profileImage ?? null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [biometricEnabled, setBiometricEnabled] = useState(user?.biometricEnabled ?? false);
-
   function showMessage(type: "success" | "error", text: string) {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 3000);
@@ -91,27 +89,6 @@ export default function SettingsPage() {
       }
     } finally {
       setIsSaving(false);
-    }
-  }
-
-  async function handleBiometricToggle() {
-    const next = !biometricEnabled;
-    setBiometricEnabled(next);
-    try {
-      const res = await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ biometricEnabled: next }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        setBiometricEnabled(!next);
-        showMessage("error", "설정 변경 실패");
-      } else {
-        await refreshUser();
-      }
-    } catch {
-      setBiometricEnabled(!next);
     }
   }
 
@@ -196,7 +173,14 @@ export default function SettingsPage() {
                 </button>
               </div>
             )}
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5 truncate">{user?.email}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="text-sm text-gray-400 dark:text-gray-500 truncate">{user?.email}</p>
+              {user?.role === "admin" && (
+                <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                  관리자
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -227,24 +211,21 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 보안 */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
-        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 px-4 pt-4 pb-2">보안</h3>
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">생체인증 로그인</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">지문/얼굴 인식으로 로그인</p>
-          </div>
+      {/* 관리자 메뉴 */}
+      {user?.role === "admin" && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 px-4 pt-4 pb-2">관리자</h3>
           <button
-            onClick={handleBiometricToggle}
-            className={`relative w-11 h-6 rounded-full transition-colors ${biometricEnabled ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"}`}
+            onClick={() => router.push("/settings/admin")}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${biometricEnabled ? "translate-x-5" : "translate-x-0"}`}
-            />
+            <p className="text-sm text-gray-600 dark:text-gray-300">사용자 관리</p>
+            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
           </button>
         </div>
-      </div>
+      )}
 
       {/* 앱 정보 */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">

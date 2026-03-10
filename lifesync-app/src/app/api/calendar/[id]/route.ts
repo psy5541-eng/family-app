@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server"
 import * as schema from "@/lib/db/schema";
 import { requireAuth } from "@/lib/auth/session";
 
 type Params = { params: Promise<{ id: string }> };
 
-// GET /api/calendar/[id]
+// GET /api/calendar/[id] — 내 일정 또는 공유된 일정
 export async function GET(request: NextRequest, { params }: Params) {
   const authResult = await requireAuth(request);
   if (authResult instanceof Response) return authResult;
@@ -18,7 +18,15 @@ export async function GET(request: NextRequest, { params }: Params) {
   const event = await db
     .select()
     .from(schema.calendarEvents)
-    .where(and(eq(schema.calendarEvents.id, id), eq(schema.calendarEvents.userId, user.id)))
+    .where(
+      and(
+        eq(schema.calendarEvents.id, id),
+        or(
+          eq(schema.calendarEvents.userId, user.id),
+          eq(schema.calendarEvents.isShared, true)
+        )
+      )
+    )
     .limit(1)
     .then((r) => r[0]);
 
@@ -62,6 +70,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     longitude?: string;
     naverPlaceId?: string;
     notifyBefore?: number;
+    isShared?: boolean;
+    color?: string;
   };
 
   if (body.title !== undefined && !body.title.trim()) {
@@ -83,6 +93,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       longitude: body.longitude !== undefined ? body.longitude ?? null : existing.longitude,
       naverPlaceId: body.naverPlaceId !== undefined ? body.naverPlaceId ?? null : existing.naverPlaceId,
       notifyBefore: body.notifyBefore !== undefined ? body.notifyBefore ?? null : existing.notifyBefore,
+      isShared: body.isShared !== undefined ? body.isShared : existing.isShared,
+      color: body.color !== undefined ? body.color : existing.color,
       updatedAt: new Date(),
     })
     .where(eq(schema.calendarEvents.id, id));
