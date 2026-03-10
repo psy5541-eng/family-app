@@ -160,34 +160,34 @@ export default function SettingsPage() {
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProfileImageChange} className="hidden" />
 
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             {isEditingNickname ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <input
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleNicknameSave()}
                   autoFocus
-                  className="flex-1 text-base font-semibold bg-transparent border-b-2 border-primary-500 outline-none text-gray-900 dark:text-white"
+                  className="min-w-0 flex-1 text-base font-semibold bg-transparent border-b-2 border-primary-500 outline-none text-gray-900 dark:text-white"
                   maxLength={20}
                 />
                 <button
                   onClick={handleNicknameSave}
                   disabled={isSaving}
-                  className="text-xs text-primary-600 font-semibold"
+                  className="text-xs text-primary-600 font-semibold flex-shrink-0"
                 >
                   저장
                 </button>
                 <button
                   onClick={() => { setNickname(user?.nickname ?? ""); setIsEditingNickname(false); }}
-                  className="text-xs text-gray-400"
+                  className="text-xs text-gray-400 flex-shrink-0"
                 >
                   취소
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <p className="text-base font-semibold text-gray-900 dark:text-white">{user?.nickname}</p>
+                <p className="text-base font-semibold text-gray-900 dark:text-white truncate">{user?.nickname}</p>
                 <button
                   onClick={() => setIsEditingNickname(true)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"

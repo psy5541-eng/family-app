@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { formatRelativeTime } from "@/lib/utils/date";
 import LikeButton from "./LikeButton";
@@ -35,12 +34,11 @@ export default function FeedCard({
           {/* 아바타 */}
           <div className="relative w-9 h-9 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
             {feed.user.profileImage ? (
-              <Image
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={feed.user.profileImage}
                 alt={feed.user.nickname}
-                fill
-                className="object-cover"
-                sizes="36px"
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm font-bold">
