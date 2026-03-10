@@ -11,6 +11,7 @@ type FeedListProps = {
   onLoadMore: () => void;
   onLikeToggle: (feedId: string) => void;
   onDelete: (feedId: string) => void;
+  onEdit?: (feed: FeedWithRelations) => void;
   currentUserId?: string;
 };
 
@@ -21,6 +22,7 @@ export default function FeedList({
   onLoadMore,
   onLikeToggle,
   onDelete,
+  onEdit,
   currentUserId,
 }: FeedListProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -61,6 +63,7 @@ export default function FeedList({
           feed={feed}
           onLikeToggle={onLikeToggle}
           onDelete={onDelete}
+          onEdit={onEdit}
           currentUserId={currentUserId}
         />
       ))}

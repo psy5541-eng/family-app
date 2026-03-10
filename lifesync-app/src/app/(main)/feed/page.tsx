@@ -4,15 +4,18 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import FeedList from "@/components/feed/FeedList";
 import CreatePost from "@/components/feed/CreatePost";
+import EditPost from "@/components/feed/EditPost";
 import { useFeed } from "@/hooks/useFeed";
 import { useAuth } from "@/hooks/useAuth";
+import type { FeedWithRelations } from "@/types/db";
 
 export default function FeedPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const { feeds, isLoading, hasMore, error, loadMore, refresh, toggleLike, deleteFeed } =
+  const { feeds, isLoading, hasMore, error, loadMore, refresh, toggleLike, deleteFeed, updateFeed } =
     useFeed();
   const [showCreate, setShowCreate] = useState(false);
+  const [editingFeed, setEditingFeed] = useState<FeedWithRelations | null>(null);
 
   // 최초 로드
   useEffect(() => {
@@ -58,6 +61,7 @@ export default function FeedPage() {
         onLoadMore={loadMore}
         onLikeToggle={toggleLike}
         onDelete={deleteFeed}
+        onEdit={setEditingFeed}
         currentUserId={user?.id}
       />
 
@@ -69,6 +73,15 @@ export default function FeedPage() {
             refresh();
           }}
           onCancel={() => setShowCreate(false)}
+        />
+      )}
+
+      {/* 수정 모달 */}
+      {editingFeed && (
+        <EditPost
+          feed={editingFeed}
+          onSave={updateFeed}
+          onCancel={() => setEditingFeed(null)}
         />
       )}
     </div>

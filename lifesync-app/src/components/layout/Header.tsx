@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -31,7 +30,8 @@ export default function Header() {
           {/* 프로필 아바타 */}
           <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
             {user.profileImage ? (
-              <Image src={user.profileImage} alt={user.nickname} fill className="object-cover" sizes="32px" />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.profileImage} alt={user.nickname} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">
                 {user.nickname[0].toUpperCase()}

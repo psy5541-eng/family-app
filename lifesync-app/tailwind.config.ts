@@ -54,6 +54,19 @@ const config: Config = {
         "safe-bottom": "env(safe-area-inset-bottom)",
         "safe-top": "env(safe-area-inset-top)",
       },
+      keyframes: {
+        "heart-pop": {
+          "0%": { transform: "scale(0)", opacity: "0" },
+          "15%": { transform: "scale(1.3)", opacity: "1" },
+          "30%": { transform: "scale(0.95)", opacity: "1" },
+          "45%": { transform: "scale(1.05)", opacity: "1" },
+          "60%": { transform: "scale(1)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "0" },
+        },
+      },
+      animation: {
+        "heart-pop": "heart-pop 0.8s ease-out forwards",
+      },
     },
   },
   plugins: [],

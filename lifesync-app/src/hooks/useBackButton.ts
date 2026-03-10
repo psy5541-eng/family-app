@@ -43,16 +43,20 @@ export function useBackButton() {
       try {
         const { App } = await import("@capacitor/app");
 
-        const listener = await App.addListener("backButton", ({ canGoBack }) => {
+        const listener = await App.addListener("backButton", () => {
           const now = Date.now();
 
-          // 히스토리가 있으면 뒤로가기
-          if (canGoBack && window.history.length > 1) {
+          // 메인 탭 경로 (이 화면들에서는 뒤로갈 곳이 없음)
+          const mainTabs = ["/dashboard", "/feed", "/calendar", "/settings"];
+          const isMainTab = mainTabs.includes(window.location.pathname);
+
+          // 메인 탭이 아니면 히스토리 뒤로가기
+          if (!isMainTab) {
             router.back();
             return;
           }
 
-          // 2초 내 두 번째 뒤로가기 → 앱 종료
+          // 메인 탭: 2초 내 두 번째 뒤로가기 → 앱 종료
           if (now - lastBackRef.current < 2000) {
             App.exitApp();
             return;

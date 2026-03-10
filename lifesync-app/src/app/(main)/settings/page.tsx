@@ -122,8 +122,6 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-24">
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white">설정</h2>
-
       {/* 토스트 메시지 */}
       {message && (
         <div

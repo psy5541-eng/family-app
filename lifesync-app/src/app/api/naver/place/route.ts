@@ -1,17 +1,15 @@
 import { NextRequest } from "next/server";
 
-const CLIENT_ID = process.env.NAVER_MAP_CLIENT_ID;
-const CLIENT_SECRET = process.env.NAVER_MAP_CLIENT_SECRET;
+// NCP (Naver Cloud Platform) Maps API 키
+const NCP_KEY_ID = process.env.NAVER_MAP_CLIENT_ID;
+const NCP_KEY = process.env.NAVER_MAP_CLIENT_SECRET;
 
-type NaverLocalItem = {
-  title: string;
-  link: string;
-  category: string;
-  description: string;
-  address: string;
+type GeoAddress = {
   roadAddress: string;
-  mapx: string;
-  mapy: string;
+  jibunAddress: string;
+  x: string; // longitude
+  y: string; // latitude
+  addressElements: { longName: string; shortName: string; code: string }[];
 };
 
 // GET /api/naver/place?query=검색어
@@ -23,8 +21,8 @@ export async function GET(request: NextRequest) {
     return Response.json({ success: false, error: "검색어를 입력해주세요." }, { status: 400 });
   }
 
-  // Naver API 키 미설정 시 mock 데이터 반환
-  if (!CLIENT_ID || CLIENT_ID.includes("your_naver")) {
+  // NCP API 키 미설정 시 mock 데이터 반환
+  if (!NCP_KEY_ID || NCP_KEY_ID.includes("your_naver")) {
     const mockItems = [
       {
         id: "mock-1",
@@ -33,7 +31,7 @@ export async function GET(request: NextRequest) {
         roadAddress: "서울특별시 강남구 테헤란로 123",
         latitude: "37.5000",
         longitude: "127.0000",
-        category: "음식점>카페",
+        category: "",
       },
       {
         id: "mock-2",
@@ -42,40 +40,43 @@ export async function GET(request: NextRequest) {
         roadAddress: "서울특별시 강남구 강남대로 456",
         latitude: "37.5010",
         longitude: "127.0010",
-        category: "음식점>한식",
+        category: "",
       },
     ];
     return Response.json({ success: true, data: { items: mockItems } });
   }
 
   try {
-    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=10&sort=random`;
+    // NCP Geocoding API 사용 (NCP 키로 인증)
+    const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}`;
     const res = await fetch(url, {
       headers: {
-        "X-Naver-Client-Id": CLIENT_ID,
-        "X-Naver-Client-Secret": CLIENT_SECRET!,
+        "X-NCP-APIGW-API-KEY-ID": NCP_KEY_ID,
+        "X-NCP-APIGW-API-KEY": NCP_KEY!,
       },
     });
 
     if (!res.ok) {
+      const text = await res.text();
+      console.error("NCP Geocoding error:", res.status, text);
       return Response.json({ success: false, error: "장소 검색에 실패했습니다." }, { status: 502 });
     }
 
-    const json = await res.json() as { items: NaverLocalItem[] };
+    const json = await res.json() as { status: string; addresses: GeoAddress[] };
 
-    const items = json.items.map((item, i) => ({
-      id: `naver-${i}-${item.mapx}`,
-      name: item.title.replace(/<[^>]+>/g, ""), // HTML 태그 제거
-      address: item.address,
-      roadAddress: item.roadAddress,
-      // Naver mapx/mapy는 카텍 좌표 (EPSG:5181) → 소수점 변환
-      latitude: (Number(item.mapy) / 1e7).toFixed(6),
-      longitude: (Number(item.mapx) / 1e7).toFixed(6),
-      category: item.category,
+    const items = json.addresses.map((addr, i) => ({
+      id: `ncp-${i}-${addr.x}-${addr.y}`,
+      name: addr.roadAddress || addr.jibunAddress || query,
+      address: addr.jibunAddress,
+      roadAddress: addr.roadAddress,
+      latitude: addr.y,
+      longitude: addr.x,
+      category: "",
     }));
 
     return Response.json({ success: true, data: { items } });
-  } catch {
+  } catch (err) {
+    console.error("Place search error:", err);
     return Response.json({ success: false, error: "장소 검색 중 오류가 발생했습니다." }, { status: 500 });
   }
 }

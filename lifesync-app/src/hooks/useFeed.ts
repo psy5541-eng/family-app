@@ -13,6 +13,7 @@ type UseFeedReturn = {
   refresh: () => Promise<void>;
   toggleLike: (feedId: string) => Promise<void>;
   deleteFeed: (feedId: string) => Promise<void>;
+  updateFeed: (feedId: string, content: string) => Promise<boolean>;
 };
 
 export function useFeed(): UseFeedReturn {
@@ -129,5 +130,25 @@ export function useFeed(): UseFeedReturn {
     }
   }, [fetchFeeds, getAuthHeader]);
 
-  return { feeds, isLoading, hasMore, error, loadMore, refresh, toggleLike, deleteFeed };
+  const updateFeed = useCallback(async (feedId: string, content: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/feed/${feedId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify({ content }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeeds((prev) =>
+          prev.map((f) => (f.id === feedId ? { ...f, content, updatedAt: new Date() } : f))
+        );
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, [getAuthHeader]);
+
+  return { feeds, isLoading, hasMore, error, loadMore, refresh, toggleLike, deleteFeed, updateFeed };
 }

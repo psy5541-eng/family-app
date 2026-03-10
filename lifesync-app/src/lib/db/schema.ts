@@ -69,7 +69,20 @@ export const feedComments = sqliteTable("feed_comments", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  parentId: text("parent_id"), // 대댓글: 부모 댓글 ID (null이면 루트 댓글)
   content: text("content").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+// ==================== COMMENT LIKES ====================
+export const commentLikes = sqliteTable("comment_likes", {
+  id: text("id").primaryKey(),
+  commentId: text("comment_id")
+    .notNull()
+    .references(() => feedComments.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -135,9 +148,16 @@ export const feedLikesRelations = relations(feedLikes, ({ one }) => ({
   user: one(users, { fields: [feedLikes.userId], references: [users.id] }),
 }));
 
-export const feedCommentsRelations = relations(feedComments, ({ one }) => ({
+export const feedCommentsRelations = relations(feedComments, ({ one, many }) => ({
   feed: one(feeds, { fields: [feedComments.feedId], references: [feeds.id] }),
   user: one(users, { fields: [feedComments.userId], references: [users.id] }),
+  parent: one(feedComments, { fields: [feedComments.parentId], references: [feedComments.id] }),
+  likes: many(commentLikes),
+}));
+
+export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
+  comment: one(feedComments, { fields: [commentLikes.commentId], references: [feedComments.id] }),
+  user: one(users, { fields: [commentLikes.userId], references: [users.id] }),
 }));
 
 export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({

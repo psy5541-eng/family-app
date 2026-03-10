@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useRef, useState } from "react";
+import ImageCropper from "./ImageCropper";
 
 type UploadedPreview = {
   file: File;
@@ -16,13 +16,14 @@ type MediaUploaderProps = {
 
 export default function MediaUploader({ maxImages = 10, onChange }: MediaUploaderProps) {
   const [previews, setPreviews] = useState<UploadedPreview[]>([]);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFiles(fileList: FileList) {
     const imageFiles = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
     const videoFiles = Array.from(fileList).filter((f) => f.type.startsWith("video/"));
 
-    // 영상이 포함된 경우 이미지 제거
+    // 영상이 포함된 경우 크롭 없이 바로 추가
     if (videoFiles.length > 0) {
       const video = videoFiles[0];
       const preview: UploadedPreview = {
@@ -35,18 +36,43 @@ export default function MediaUploader({ maxImages = 10, onChange }: MediaUploade
       return;
     }
 
-    // 이미지 처리 (최대 maxImages)
+    // 이미지 처리: 크롭 큐에 추가
     const remaining = maxImages - previews.length;
     const newFiles = imageFiles.slice(0, remaining);
-    const newPreviews = newFiles.map((f) => ({
-      file: f,
-      previewUrl: URL.createObjectURL(f),
-      type: "image" as const,
-    }));
+    if (newFiles.length > 0) {
+      setCropQueue(newFiles);
+    }
+  }
 
-    const updated = [...previews, ...newPreviews];
+  function handleCropped(croppedFile: File) {
+    const preview: UploadedPreview = {
+      file: croppedFile,
+      previewUrl: URL.createObjectURL(croppedFile),
+      type: "image",
+    };
+
+    const updated = [...previews, preview];
     setPreviews(updated);
     onChange(updated.map((p) => p.file));
+
+    // 다음 이미지로
+    setCropQueue((prev) => prev.slice(1));
+  }
+
+  function handleCropCancel() {
+    // 현재 이미지 건너뛰기 (원본으로 추가)
+    const currentFile = cropQueue[0];
+    if (currentFile) {
+      const preview: UploadedPreview = {
+        file: currentFile,
+        previewUrl: URL.createObjectURL(currentFile),
+        type: "image",
+      };
+      const updated = [...previews, preview];
+      setPreviews(updated);
+      onChange(updated.map((p) => p.file));
+    }
+    setCropQueue((prev) => prev.slice(1));
   }
 
   function removeFile(index: number) {
@@ -69,7 +95,8 @@ export default function MediaUploader({ maxImages = 10, onChange }: MediaUploade
               {p.type === "video" ? (
                 <video src={p.previewUrl} className="w-full h-full object-cover" />
               ) : (
-                <Image src={p.previewUrl} alt="미리보기" fill className="object-cover" sizes="33vw" />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.previewUrl} alt="미리보기" className="w-full h-full object-cover" />
               )}
               <button
                 onClick={() => removeFile(i)}
@@ -102,8 +129,20 @@ export default function MediaUploader({ maxImages = 10, onChange }: MediaUploade
         accept="image/*,video/*"
         multiple
         className="hidden"
-        onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        onChange={(e) => {
+          if (e.target.files) handleFiles(e.target.files);
+          e.target.value = ""; // 같은 파일 다시 선택 가능
+        }}
       />
+
+      {/* 이미지 크롭 모달 */}
+      {cropQueue.length > 0 && (
+        <ImageCropper
+          file={cropQueue[0]}
+          onCropped={handleCropped}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
