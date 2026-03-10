@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run db:generate)",
+      "Bash(npm run db:migrate)",
+      "Bash(node -e \"const Database = require\\(''better-sqlite3''\\); const db = new Database\\(''./local.db''\\); const tables = db.prepare\\(\"\"SELECT name FROM sqlite_master WHERE type=''table''\"\"\\).all\\(\\); console.log\\(''테이블 목록:'', tables.map\\(t=>t.name\\).join\\('', ''\\)\\);\")",
+      "Bash(npm install sharp @aws-sdk/client-s3)"
+    ]
+  }
+}

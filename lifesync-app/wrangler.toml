@@ -1,0 +1,13 @@
+name = "lifesync-app"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lifesync-db"
+database_id = "your_d1_database_id"  # .env.local의 CLOUDFLARE_D1_DATABASE_ID 값으로 교체
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "lifesync-media"
