@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const BIOMETRIC_TOKEN_KEY = "lifesync_biometric_token";
-// Capacitor 플러그인 패키지명 — 문자열로 분리해 webpack 정적 분석에서 제외
-const BIOMETRIC_PLUGIN_ID = "@capacitor-community/biometric-auth";
+// Capacitor 플러그인 패키지명 — 문자열 연결으로 webpack/esbuild 정적 분석에서 제외
+const BIOMETRIC_PLUGIN_ID = ["@capacitor-community", "biometric-auth"].join("/");
 
 /**
  * 지문/Face ID 인증 버튼
