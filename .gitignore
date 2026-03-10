@@ -38,6 +38,11 @@ android/
 ios/
 *.keystore
 
+# local dev files
+*.db
+.uploads/
+.wrangler/
+
 # IDE
 .idea/
 .vscode/
