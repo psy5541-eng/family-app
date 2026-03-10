@@ -46,3 +46,4 @@ next-env.d.ts
 
 # local uploads (개발용 R2 대체)
 /.uploads
+.open-next/

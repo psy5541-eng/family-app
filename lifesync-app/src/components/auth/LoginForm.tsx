@@ -10,6 +10,8 @@ const BiometricButton = dynamic(() => import("./BiometricButton"), {
   ssr: false,
 });
 
+const AUTO_LOGIN_PREF_KEY = "lifesync_auto_login_asked";
+
 export default function LoginForm() {
   const router = useRouter();
   const { login } = useAuth();
@@ -19,6 +21,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAutoLoginPrompt, setShowAutoLoginPrompt] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,11 +33,65 @@ export default function LoginForm() {
     const result = await login(email.trim(), password);
 
     if (result.success) {
-      router.replace("/dashboard");
+      // 자동 로그인 여부를 아직 물어보지 않았으면 프롬프트 표시
+      const alreadyAsked = localStorage.getItem(AUTO_LOGIN_PREF_KEY);
+      if (!alreadyAsked) {
+        setShowAutoLoginPrompt(true);
+        setIsLoading(false);
+      } else {
+        router.replace("/dashboard");
+      }
     } else {
       setError(result.error);
       setIsLoading(false);
     }
+  }
+
+  function handleAutoLoginChoice(keepLoggedIn: boolean) {
+    localStorage.setItem(AUTO_LOGIN_PREF_KEY, "true");
+    if (!keepLoggedIn) {
+      localStorage.setItem("lifesync_no_auto_login", "true");
+    } else {
+      localStorage.removeItem("lifesync_no_auto_login");
+    }
+    setShowAutoLoginPrompt(false);
+    router.replace("/dashboard");
+  }
+
+  // 자동 로그인 프롬프트
+  if (showAutoLoginPrompt) {
+    return (
+      <div className="space-y-6 text-center">
+        <div>
+          <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            자동 로그인
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            다음에도 자동으로 로그인할까요?
+          </p>
+        </div>
+
+        <div className="space-y-2.5">
+          <button
+            onClick={() => handleAutoLoginChoice(true)}
+            className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors"
+          >
+            네, 자동 로그인할게요
+          </button>
+          <button
+            onClick={() => handleAutoLoginChoice(false)}
+            className="w-full py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors"
+          >
+            아니요, 매번 로그인할게요
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

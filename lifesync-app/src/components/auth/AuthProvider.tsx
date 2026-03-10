@@ -51,6 +51,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // 앱 시작 시 localStorage 토큰으로 자동 로그인
   useEffect(() => {
+    // "매번 로그인" 선택 시: 새 세션이면 토큰 제거
+    const noAutoLogin = localStorage.getItem("lifesync_no_auto_login");
+    const sessionActive = sessionStorage.getItem("lifesync_active");
+    if (noAutoLogin && !sessionActive) {
+      // 새 세션 (앱 재시작) → 토큰 제거
+      localStorage.removeItem(TOKEN_KEY);
+    }
+    sessionStorage.setItem("lifesync_active", "true");
+
     const stored = localStorage.getItem(TOKEN_KEY);
     if (!stored) {
       setIsLoading(false);
@@ -62,7 +71,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (u) {
         setUser(u);
       } else {
-        // 토큰 만료 또는 무효
         localStorage.removeItem(TOKEN_KEY);
         setToken(null);
       }

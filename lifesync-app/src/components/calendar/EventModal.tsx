@@ -216,6 +216,35 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
               </div>
             </div>
 
+            {/* C6: 네이버맵 미니 지도 (장소 + 좌표가 있을 때) */}
+            {placeName && latitude && longitude && (
+              <a
+                href={`nmap://place?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(placeName)}&appname=com.lifesync.app`}
+                onClick={(e) => {
+                  // 네이버 지도 앱이 없으면 웹 지도로 이동
+                  setTimeout(() => {
+                    window.location.href = `https://map.naver.com/v5/search/${encodeURIComponent(placeName)}?c=${longitude},${latitude},15,0,0,0,dh`;
+                  }, 500);
+                }}
+                className="block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600"
+              >
+                {/* 네이버 Static Map API */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://naveropenapi.apigw.ntruss.com/map-static/v2/raster?w=400&h=200&center=${longitude},${latitude}&level=15&markers=type:d|size:mid|pos:${longitude} ${latitude}&X-NCP-APIGW-API-KEY-ID=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? ""}`}
+                  alt={placeName}
+                  className="w-full h-32 object-cover bg-gray-100 dark:bg-gray-700"
+                />
+                <div className="px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{placeName}</p>
+                    <p className="text-[10px] text-gray-400 truncate">{placeAddress}</p>
+                  </div>
+                  <span className="text-[10px] text-primary-500 font-medium flex-shrink-0 ml-2">지도 열기</span>
+                </div>
+              </a>
+            )}
+
             {/* 설명 */}
             <div className="flex items-start gap-2">
               <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

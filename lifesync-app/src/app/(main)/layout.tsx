@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFCM } from "@/hooks/useFCM";
+import { useBackButton } from "@/hooks/useBackButton";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import BottomNav from "@/components/layout/BottomNav";
 import Header from "@/components/layout/Header";
 
@@ -11,6 +13,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   useFCM(); // FCM 토큰 등록 + 포그라운드 메시지 처리
+  useBackButton(); // Android 뒤로가기 2회 종료
+
+  const handleRefresh = useCallback(async () => {
+    window.location.reload();
+  }, []);
+  usePullToRefresh({ onRefresh: handleRefresh }); // Pull-to-Refresh
 
   // 비로그인 시 로그인 페이지로 이동
   useEffect(() => {

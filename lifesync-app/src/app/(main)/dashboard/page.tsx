@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
 import StockWidget from "@/components/dashboard/StockWidget";
 import DdayWidget from "@/components/dashboard/DdayWidget";
+import NewsWidget from "@/components/dashboard/NewsWidget";
 import { useAuth } from "@/hooks/useAuth";
 
 const QUOTES = [
@@ -99,6 +100,16 @@ export default function DashboardPage() {
         </a>
         <DdayWidget />
       </div>
+
+      {/* D2: 뉴스 위젯 */}
+      <a
+        href="https://news.naver.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block"
+      >
+        <NewsWidget />
+      </a>
     </div>
   );
 }
