@@ -1,10 +1,9 @@
 /**
  * API Route에서 사용하는 DB 클라이언트
  * - 로컬 개발: better-sqlite3 (local.db)
- * - Cloudflare Pages 프로덕션: D1 바인딩
+ * - Cloudflare Pages 프로덕션: D1 바인딩 (OpenNext)
  */
 import { getDb, getLocalDb } from "./index";
-import type { schema } from "./index";
 import { drizzle as drizzleD1 } from "drizzle-orm/d1";
 import * as schemaObj from "./schema";
 
@@ -16,9 +15,10 @@ type CloudflareEnv = {
 
 function getCloudflareEnv(): CloudflareEnv {
   try {
+    // OpenNext Cloudflare 컨텍스트
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getRequestContext } = require("@cloudflare/next-on-pages");
-    return getRequestContext().env as CloudflareEnv;
+    const { getCloudflareContext } = require("@opennextjs/cloudflare");
+    return getCloudflareContext().env as CloudflareEnv;
   } catch {
     return {};
   }
@@ -31,7 +31,6 @@ export function getServerDb(): ServerDb {
 
   const env = getCloudflareEnv();
   if (env.DB) {
-    // D1 바인딩을 BetterSQLite3 호환 타입으로 캐스팅
     return drizzleD1(env.DB as Parameters<typeof getDb>[0] as never, {
       schema: schemaObj,
     }) as unknown as ServerDb;

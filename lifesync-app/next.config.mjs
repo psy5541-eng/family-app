@@ -1,5 +1,3 @@
-import { setupDevPlatform } from "@cloudflare/next-on-pages/next-dev";
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -17,10 +15,5 @@ const nextConfig = {
   },
   serverExternalPackages: ["sharp", "better-sqlite3"],
 };
-
-// 로컬 개발 시 Cloudflare 바인딩 시뮬레이션 (D1, R2 등)
-if (process.env.NODE_ENV === "development") {
-  await setupDevPlatform();
-}
 
 export default nextConfig;
