@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq, and } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 
 // GET /api/calendar/dday  - D-day 일정 목록 (최대 10개, 날짜순)
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof Response) return authResult;
   const { user } = authResult;
 
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const events = await db
     .select()

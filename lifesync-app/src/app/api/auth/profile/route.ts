@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 import { isValidNickname } from "@/lib/utils/validation";
 
@@ -24,7 +25,7 @@ export async function PATCH(request: NextRequest) {
       return Response.json({ success: false, error: check.message }, { status: 400 });
     }
     // 닉네임 중복 체크 (본인 제외)
-    const db = getLocalDb();
+    const db = getServerDb();
     const existing = await db
       .select({ id: schema.users.id })
       .from(schema.users)
@@ -45,7 +46,7 @@ export async function PATCH(request: NextRequest) {
     updates.biometricEnabled = body.biometricEnabled;
   }
 
-  const db = getLocalDb();
+  const db = getServerDb();
   await db.update(schema.users).set(updates).where(eq(schema.users.id, user.id));
 
   const updated = await db

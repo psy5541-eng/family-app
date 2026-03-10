@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq, and } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 
 // POST /api/feed/[id]/like  →  좋아요 토글
@@ -13,7 +14,7 @@ export async function POST(
   const { user } = authResult;
 
   const { id: feedId } = await params;
-  const db = getLocalDb();
+  const db = getServerDb();
 
   // 피드 존재 확인
   const feed = await db

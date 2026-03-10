@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
-import { eq, and, gte, lt } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { eq, and, gte, lt, isNotNull } from "drizzle-orm";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
+import { sendMulticastPush } from "@/lib/fcm/server";
 
 // GET /api/calendar?year=YYYY&month=MM
 export async function GET(request: NextRequest) {
@@ -9,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof Response) return authResult;
   const { user } = authResult;
 
-  const db = getLocalDb();
+  const db = getServerDb();
   const { searchParams } = request.nextUrl;
 
   const year = Number(searchParams.get("year") ?? new Date().getFullYear());
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
   if (authResult instanceof Response) return authResult;
   const { user } = authResult;
 
-  const db = getLocalDb();
+  const db = getServerDb();
   const body = await request.json() as {
     title?: string;
     description?: string;
@@ -91,6 +93,23 @@ export async function POST(request: NextRequest) {
     .where(eq(schema.calendarEvents.id, id))
     .limit(1)
     .then((r) => r[0]);
+
+  // FCM 푸시 알림: 모든 사용자에게 일정 등록 알림
+  const tokenRows = await db
+    .select({ fcmToken: schema.users.fcmToken })
+    .from(schema.users)
+    .where(isNotNull(schema.users.fcmToken));
+  const tokens = tokenRows
+    .map((r) => r.fcmToken!)
+    .filter((t) => t.length > 0);
+  if (tokens.length > 0) {
+    sendMulticastPush(
+      tokens,
+      "새 일정",
+      `${body.title!.trim()} 일정이 등록되었습니다.`,
+      { type: "calendar", eventId: id }
+    ).catch(() => {});
+  }
 
   return Response.json({ success: true, data: { event } }, { status: 201 });
 }

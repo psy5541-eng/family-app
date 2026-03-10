@@ -1,12 +1,14 @@
 import { NextRequest } from "next/server";
-import { eq, desc, lt, sql } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { eq, desc, lt, sql, isNotNull } from "drizzle-orm";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth, getCurrentUser } from "@/lib/auth/session";
+import { sendMulticastPush } from "@/lib/fcm/server";
 import type { FeedWithRelations, FeedMedia } from "@/types/db";
 
 // GET /api/feed?cursor={lastId}&limit=10
 export async function GET(request: NextRequest) {
-  const db = getLocalDb();
+  const db = getServerDb();
   const { searchParams } = request.nextUrl;
   const cursor = searchParams.get("cursor"); // 마지막 피드 ID
   const limit = Math.min(Number(searchParams.get("limit") ?? 10), 30);
@@ -108,7 +110,7 @@ export async function POST(request: NextRequest) {
   if (authResult instanceof Response) return authResult;
   const { user } = authResult;
 
-  const db = getLocalDb();
+  const db = getServerDb();
   const body = await request.json() as {
     content?: string;
     mediaUrls?: Array<{ url: string; type: "image" | "video"; order: number }>;
@@ -151,6 +153,23 @@ export async function POST(request: NextRequest) {
     .where(eq(schema.feeds.id, feedId))
     .limit(1)
     .then((r) => r[0]);
+
+  // FCM 푸시 알림: 작성자 제외한 모든 사용자에게 전송
+  const tokenRows = await db
+    .select({ fcmToken: schema.users.fcmToken })
+    .from(schema.users)
+    .where(isNotNull(schema.users.fcmToken));
+  const tokens = tokenRows
+    .map((r) => r.fcmToken!)
+    .filter((t) => t.length > 0);
+  if (tokens.length > 0) {
+    sendMulticastPush(
+      tokens,
+      "새 게시물",
+      `${user.nickname}님이 새 게시물을 올렸습니다.`,
+      { type: "feed", feedId }
+    ).catch(() => {});
+  }
 
   return Response.json(
     { success: true, data: { feedId: feed.id } },

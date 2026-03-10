@@ -1,13 +1,22 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
+// 배포 URL (Cloudflare Pages 배포 후 실제 URL로 변경)
+const PRODUCTION_URL = "https://lifesync.pages.dev";
+
+// 로컬 개발 테스트용 (PC와 폰이 같은 WiFi 필요)
+const DEV_URL = "http://192.168.20.33:3000";
+
+const isDev = process.env.CAP_DEV === "true";
+
 const config: CapacitorConfig = {
   appId: "com.lifesync.app",
   appName: "LifeSync",
-  webDir: "out",   // next export 결과물 디렉터리
+  webDir: "out",
   server: {
-    // 개발 시 로컬 Next.js 서버 사용 (핫리로드)
-    // url: "http://192.168.x.x:3000",   // ← 로컬 IP로 변경
-    // cleartext: true,
+    // 개발 시: CAP_DEV=true npx cap sync android 으로 로컬 서버 사용
+    // 배포 시: PRODUCTION_URL 사용
+    url: isDev ? DEV_URL : PRODUCTION_URL,
+    cleartext: isDev, // HTTP 허용 (개발 전용)
   },
   android: {
     buildOptions: {

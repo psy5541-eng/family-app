@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq, asc, and } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 
 // GET /api/feed/[id]/comments
@@ -9,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: feedId } = await params;
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const comments = await db
     .select({
@@ -43,7 +44,7 @@ export async function POST(
   const { user } = authResult;
 
   const { id: feedId } = await params;
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const body = await request.json() as { content?: string };
 
@@ -96,7 +97,7 @@ export async function DELETE(
     );
   }
 
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const comment = await db
     .select()

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 
 // POST /api/fcm/token — FCM 토큰 등록
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ success: false, error: "토큰이 필요합니다." }, { status: 400 });
   }
 
-  const db = getLocalDb();
+  const db = getServerDb();
   await db
     .update(schema.users)
     .set({ fcmToken: body.token, updatedAt: new Date() })
@@ -29,7 +30,7 @@ export async function DELETE(request: NextRequest) {
   if (auth instanceof Response) return auth;
   const { user } = auth;
 
-  const db = getLocalDb();
+  const db = getServerDb();
   await db
     .update(schema.users)
     .set({ fcmToken: null, updatedAt: new Date() })

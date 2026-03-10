@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
 import {
   checkLoginAttempt,
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const db = getLocalDb();
+  const db = getServerDb();
 
   // ── 사용자 조회 ───────────────────────────────────────────────
   const user = await db

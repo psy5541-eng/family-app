@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 
 // DELETE /api/feed/[id]
@@ -13,7 +14,7 @@ export async function DELETE(
   const { user } = authResult;
 
   const { id } = await params;
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const feed = await db
     .select()

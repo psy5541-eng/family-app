@@ -54,10 +54,10 @@ export default function StockWidget() {
   useEffect(() => {
     load();
 
-    // 장 운영 중에는 5분마다 자동 갱신
+    // 장 운영 중에는 1분마다 자동 갱신 (PRD 명세)
     const interval = setInterval(() => {
       if (isMarketOpen()) load();
-    }, 5 * 60 * 1000);
+    }, 60 * 1000);
 
     return () => clearInterval(interval);
   }, [load]);

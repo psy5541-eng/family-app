@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq, and } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 
 type Params = { params: Promise<{ id: string }> };
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   const { user } = authResult;
 
   const { id } = await params;
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const event = await db
     .select()
@@ -35,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const { user } = authResult;
 
   const { id } = await params;
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const existing = await db
     .select()
@@ -103,7 +104,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   const { user } = authResult;
 
   const { id } = await params;
-  const db = getLocalDb();
+  const db = getServerDb();
 
   const existing = await db
     .select()

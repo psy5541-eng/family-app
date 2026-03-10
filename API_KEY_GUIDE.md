@@ -84,7 +84,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFA
 #
 # ⚠️ 인코딩 키 말고 "일반 인증키(Decoding)" 사용!
 
-WEATHER_API_KEY=
+WEATHER_API_KEY=90814877fa2cae8288d3b0c7583c02c7e990b519f5185e45067058c2f2d30d27
 
 
 # ============================================

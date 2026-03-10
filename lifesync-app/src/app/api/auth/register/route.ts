@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { getLocalDb, schema } from "@/lib/db";
+import { getServerDb } from "@/lib/db/server"
+import { schema } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
 import { isValidEmail, isValidPassword, isValidNickname } from "@/lib/utils/validation";
 
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ success: false, error: nicknameCheck.message }, { status: 400 });
   }
 
-  const db = getLocalDb();
+  const db = getServerDb();
 
   // ── 중복 체크 ────────────────────────────────────────────────
   const existingEmail = await db
