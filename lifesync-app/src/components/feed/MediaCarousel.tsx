@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import type { FeedMedia } from "@/types/db";
+import ImageViewer from "./ImageViewer";
 
 type MediaCarouselProps = {
   media: FeedMedia[];
@@ -31,13 +32,23 @@ function HeartAnimation({ show }: { show: boolean }) {
 export default function MediaCarousel({ media, onDoubleTap }: MediaCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showHeart, setShowHeart] = useState(false);
+  const [viewerSrc, setViewerSrc] = useState<string | null>(null);
   const lastTapRef = useRef(0);
   const heartTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // 핀치 감지용
+  const pinchDetectedRef = useRef(false);
+
   const handleTap = useCallback(() => {
+    // 핀치 직후면 무시
+    if (pinchDetectedRef.current) {
+      pinchDetectedRef.current = false;
+      return;
+    }
+
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
-      // 더블탭 감지
+      // 더블탭 감지 → 좋아요
       onDoubleTap?.();
       setShowHeart(true);
       if (heartTimerRef.current) clearTimeout(heartTimerRef.current);
@@ -48,78 +59,111 @@ export default function MediaCarousel({ media, onDoubleTap }: MediaCarouselProps
     }
   }, [onDoubleTap]);
 
+  // 핀치 시작 감지 → 이미지 뷰어 열기
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinchDetectedRef.current = true;
+        // 현재 보이는 이미지의 URL 가져오기
+        const currentMedia = media[activeIndex];
+        if (currentMedia && currentMedia.mediaType !== "video") {
+          setViewerSrc(currentMedia.mediaUrl);
+        }
+      }
+    },
+    [media, activeIndex]
+  );
+
   if (!media.length) return null;
 
   // 단일 미디어
   if (media.length === 1) {
     const item = media[0];
     return (
-      <div className="relative w-full bg-black" onClick={handleTap}>
-        {item.mediaType === "video" ? (
-          <video
-            src={item.mediaUrl}
-            className="w-full h-auto"
-            controls
-            playsInline
-          />
-        ) : (
-          <MediaImage src={item.mediaUrl} alt="피드 이미지" />
+      <>
+        <div
+          className="relative w-full bg-black"
+          onClick={handleTap}
+          onTouchStart={handleTouchStart}
+        >
+          {item.mediaType === "video" ? (
+            <video
+              src={item.mediaUrl}
+              className="w-full h-auto"
+              controls
+              playsInline
+            />
+          ) : (
+            <MediaImage src={item.mediaUrl} alt="피드 이미지" />
+          )}
+          <HeartAnimation show={showHeart} />
+        </div>
+        {viewerSrc && (
+          <ImageViewer src={viewerSrc} onClose={() => setViewerSrc(null)} />
         )}
-        <HeartAnimation show={showHeart} />
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="relative" onClick={handleTap}>
-      {/* 스크롤 컨테이너 */}
+    <>
       <div
-        className="flex overflow-x-auto scroll-snap-x scrollbar-hide"
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          const index = Math.round(el.scrollLeft / el.clientWidth);
-          setActiveIndex(index);
-        }}
+        className="relative"
+        onClick={handleTap}
+        onTouchStart={handleTouchStart}
       >
-        {media.map((item) => (
-          <div
-            key={item.id}
-            className="scroll-snap-start flex-shrink-0 w-full bg-black"
-          >
-            {item.mediaType === "video" ? (
-              <video
-                src={item.mediaUrl}
-                className="w-full h-auto"
-                controls
-                playsInline
-              />
-            ) : (
-              <MediaImage src={item.mediaUrl} alt="피드 이미지" />
-            )}
-          </div>
-        ))}
-      </div>
+        {/* 스크롤 컨테이너 */}
+        <div
+          className="flex overflow-x-auto scroll-snap-x scrollbar-hide"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const index = Math.round(el.scrollLeft / el.clientWidth);
+            setActiveIndex(index);
+          }}
+        >
+          {media.map((item) => (
+            <div
+              key={item.id}
+              className="scroll-snap-start flex-shrink-0 w-full bg-black"
+            >
+              {item.mediaType === "video" ? (
+                <video
+                  src={item.mediaUrl}
+                  className="w-full h-auto"
+                  controls
+                  playsInline
+                />
+              ) : (
+                <MediaImage src={item.mediaUrl} alt="피드 이미지" />
+              )}
+            </div>
+          ))}
+        </div>
 
-      <HeartAnimation show={showHeart} />
+        <HeartAnimation show={showHeart} />
 
-      {/* 카운터 뱃지 (우상단) */}
-      <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
-        {activeIndex + 1} / {media.length}
-      </div>
+        {/* 카운터 뱃지 (우상단) */}
+        <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+          {activeIndex + 1} / {media.length}
+        </div>
 
-      {/* 도트 인디케이터 */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
-        {media.map((_, i) => (
-          <div
-            key={i}
-            className={`rounded-full transition-all duration-200 ${
-              i === activeIndex
-                ? "w-2 h-2 bg-white"
-                : "w-1.5 h-1.5 bg-white/50"
-            }`}
-          />
-        ))}
+        {/* 도트 인디케이터 */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+          {media.map((_, i) => (
+            <div
+              key={i}
+              className={`rounded-full transition-all duration-200 ${
+                i === activeIndex
+                  ? "w-2 h-2 bg-white"
+                  : "w-1.5 h-1.5 bg-white/50"
+              }`}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+      {viewerSrc && (
+        <ImageViewer src={viewerSrc} onClose={() => setViewerSrc(null)} />
+      )}
+    </>
   );
 }
