@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const MAIN_TABS = ["/dashboard", "/feed", "/calendar", "/settings"];
 
@@ -32,16 +32,14 @@ export function registerBackHandler(handler: () => void) {
  *
  * 1순위: 모달/팝업이 열려있으면 닫기
  * 2순위: 메인 탭이면 토스트 → 두 번째 누르면 앱 종료
- * 3순위: 서브 페이지면 브라우저 뒤로가기
+ * 3순위: 서브 페이지면 홈으로 이동
  */
 export function useBackButton() {
   const pathname = usePathname();
-  const router = useRouter();
   const lastBackRef = useRef(0);
   const toastRef = useRef<HTMLDivElement | null>(null);
   const pathnameRef = useRef(pathname);
 
-  // 최신 pathname 유지
   useEffect(() => {
     pathnameRef.current = pathname;
   }, [pathname]);
@@ -73,86 +71,73 @@ export function useBackButton() {
     }, 2000);
   }, []);
 
-  // Capacitor 네이티브 back button 리스너
-  useEffect(() => {
-    let removeListener: (() => void) | null = null;
+  // 공통 뒤로가기 핸들러
+  const handleBack = useCallback(() => {
+    // 1순위: 모달/팝업 닫기
+    const handlers = getBackHandlers();
+    if (handlers.length > 0) {
+      const handler = handlers.pop()!;
+      handler();
+      return;
+    }
 
+    // 2순위: 메인 탭 → 종료 로직
+    const currentPath = pathnameRef.current;
+    if (isMainTab(currentPath)) {
+      const now = Date.now();
+      if (now - lastBackRef.current < 2000) {
+        // 앱 종료
+        import("@capacitor/app")
+          .then(({ App }) => App.exitApp())
+          .catch(() => {}); // 웹에서는 종료 불가
+        return;
+      }
+      lastBackRef.current = now;
+      showToast();
+      return;
+    }
+
+    // 3순위: 서브 페이지 → 홈으로 이동
+    window.location.href = "/dashboard";
+  }, [isMainTab, showToast]);
+
+  useEffect(() => {
+    // 1. 네이티브 백 이벤트 리스너 (MainActivity.java에서 dispatch)
+    function onNativeBack() {
+      handleBack();
+    }
+    window.addEventListener("nativeBack", onNativeBack);
+
+    // 2. Capacitor App plugin fallback (네이티브 콜백이 없는 경우)
+    let removeCapListener: (() => void) | null = null;
     import("@capacitor/app")
       .then(({ App }) => {
-        const listener = App.addListener("backButton", () => {
-          // 1순위: 모달/팝업 닫기
-          const handlers = getBackHandlers();
-          if (handlers.length > 0) {
-            const handler = handlers.pop()!;
-            handler();
-            return;
-          }
-
-          // 2순위: 메인 탭 → 종료 로직
-          const currentPath = pathnameRef.current;
-          if (isMainTab(currentPath)) {
-            const now = Date.now();
-            if (now - lastBackRef.current < 2000) {
-              App.exitApp();
-              return;
-            }
-            lastBackRef.current = now;
-            showToast();
-            return;
-          }
-
-          // 3순위: 서브 페이지 → 뒤로가기
-          router.back();
-        });
-
-        // listener는 Promise<PluginListenerHandle>
-        listener.then((handle) => {
-          removeListener = () => handle.remove();
+        App.addListener("backButton", () => {
+          handleBack();
+        }).then((handle) => {
+          removeCapListener = () => handle.remove();
         });
       })
       .catch(() => {
-        // Capacitor 없는 환경 (웹 브라우저) → popstate fallback
-        setupPopstateFallback();
+        // 3. 웹 브라우저 fallback
+        window.history.pushState({ __backGuard: true }, "");
+
+        function handlePopState() {
+          window.history.pushState({ __backGuard: true }, "");
+          handleBack();
+        }
+
+        window.addEventListener("popstate", handlePopState);
+        removeCapListener = () => window.removeEventListener("popstate", handlePopState);
       });
 
-    function setupPopstateFallback() {
-      // 히스토리 가드 push
-      window.history.pushState({ __backGuard: true }, "");
-
-      function handlePopState() {
-        // 1순위: 모달/팝업 닫기
-        const handlers = getBackHandlers();
-        if (handlers.length > 0) {
-          window.history.pushState({ __backGuard: true }, "");
-          const handler = handlers.pop()!;
-          handler();
-          return;
-        }
-
-        // 2순위: 메인 탭 → 종료 로직
-        const currentPath = window.location.pathname;
-        if (isMainTab(currentPath)) {
-          window.history.pushState({ __backGuard: true }, "");
-          const now = Date.now();
-          if (now - lastBackRef.current < 2000) {
-            return; // 웹에서는 종료 불가
-          }
-          lastBackRef.current = now;
-          showToast();
-        }
-        // 서브 페이지는 브라우저 기본 동작 (history.back)
-      }
-
-      window.addEventListener("popstate", handlePopState);
-      removeListener = () => window.removeEventListener("popstate", handlePopState);
-    }
-
     return () => {
-      removeListener?.();
+      window.removeEventListener("nativeBack", onNativeBack);
+      removeCapListener?.();
       if (toastRef.current) {
         toastRef.current.remove();
         toastRef.current = null;
       }
     };
-  }, [isMainTab, showToast, router]);
+  }, [handleBack]);
 }

@@ -74,9 +74,9 @@ export default function EventModal({ date, event, onSave, onDelete, onClose, onP
   const [error, setError] = useState<string | null>(null);
   const [showPlaceSearch, setShowPlaceSearch] = useState(false);
 
-  // 참석자 관련 상태
+  // 참석자 관련 상태 (로컬 관리 → 즉시 UI 반영)
   const [isJoining, setIsJoining] = useState(false);
-  const participants = event?.participants ?? [];
+  const [participants, setParticipants] = useState<Participant[]>(event?.participants ?? []);
   const isJoined = participants.some((p) => p.userId === user?.id);
 
   // 뒤로가기 시 모달 닫기
@@ -136,28 +136,39 @@ export default function EventModal({ date, event, onSave, onDelete, onClose, onP
   }
 
   async function handleJoin() {
-    if (!event) return;
+    if (!event || !user) return;
     setIsJoining(true);
+    // 즉시 UI 반영
+    setParticipants((prev) => [...prev, { userId: user.id, nickname: user.nickname, profileImage: user.profileImage ?? null }]);
     try {
       await fetch(`/api/calendar/${event.id}/participants`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
       });
       onParticipantsChange?.();
-    } catch { /* ignore */ }
+    } catch {
+      // 실패 시 롤백
+      setParticipants((prev) => prev.filter((p) => p.userId !== user.id));
+    }
     setIsJoining(false);
   }
 
   async function handleLeave() {
-    if (!event) return;
+    if (!event || !user) return;
     setIsJoining(true);
+    const prevParticipants = participants;
+    // 즉시 UI 반영
+    setParticipants((prev) => prev.filter((p) => p.userId !== user.id));
     try {
       await fetch(`/api/calendar/${event.id}/participants`, {
         method: "DELETE",
         headers: getAuthHeader(),
       });
       onParticipantsChange?.();
-    } catch { /* ignore */ }
+    } catch {
+      // 실패 시 롤백
+      setParticipants(prevParticipants);
+    }
     setIsJoining(false);
   }
 
