@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
 import EventListView from "@/components/calendar/EventListView";
 import EventModal from "@/components/calendar/EventModal";
@@ -22,6 +23,7 @@ type ViewMode = "calendar" | "list";
 
 export default function CalendarPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const {
     events,
     isLoading,
@@ -49,6 +51,22 @@ export default function CalendarPage() {
     loadEvents(currentYear, currentMonth);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentYear, currentMonth]);
+
+  // 알림 클릭 시 자동으로 해당 일정 모달 열기
+  useEffect(() => {
+    const eventId = searchParams.get("eventId");
+    if (!eventId || events.length === 0) return;
+
+    const target = events.find((e) => e.id === eventId);
+    if (target) {
+      setEditingEvent(target);
+      setShowModal(true);
+      // URL에서 eventId 제거 (히스토리 교체)
+      const url = new URL(window.location.href);
+      url.searchParams.delete("eventId");
+      window.history.replaceState({}, "", url.pathname);
+    }
+  }, [searchParams, events]);
 
   const selectedEvents = selectedDate ? getEventsForDate(selectedDate) : [];
   const monthName = new Date(currentYear, currentMonth - 1).toLocaleDateString("ko-KR", {
@@ -227,10 +245,8 @@ export default function CalendarPage() {
                           return (
                             <button
                               key={event.id}
-                              onClick={() => isOwner ? openEdit(event) : undefined}
-                              className={`w-full text-left bg-white dark:bg-gray-800 rounded-xl px-4 py-3 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors ${
-                                isOwner ? "hover:border-primary-200 dark:hover:border-primary-700 cursor-pointer" : "cursor-default"
-                              }`}
+                              onClick={() => openEdit(event)}
+                              className="w-full text-left bg-white dark:bg-gray-800 rounded-xl px-4 py-3 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors hover:border-primary-200 dark:hover:border-primary-700 cursor-pointer"
                             >
                               <div className="flex items-start gap-2">
                                 <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${COLOR_DOT_MAP[colorKey] ?? "bg-primary-500"}`} />
@@ -320,6 +336,7 @@ export default function CalendarPage() {
           onSave={handleSave}
           onDelete={editingEvent && editingEvent.userId === user?.id ? handleDelete : undefined}
           onClose={() => setShowModal(false)}
+          onParticipantsChange={() => loadEvents(currentYear, currentMonth)}
         />
       )}
     </div>

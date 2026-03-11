@@ -59,6 +59,7 @@ async function scheduleLocalNotifications(events: CalendarEvent[]) {
       body: string;
       channelId: string;
       schedule: { at: Date; allowWhileIdle: boolean };
+      extra: { eventId: string };
     }[] = [];
 
     for (const event of events) {
@@ -79,6 +80,7 @@ async function scheduleLocalNotifications(events: CalendarEvent[]) {
         body: `${getNotifyLabel(minutesBefore)} 시작되는 일정입니다.`,
         channelId: "calendar_events",
         schedule: { at: new Date(notifyAt), allowWhileIdle: true },
+        extra: { eventId: event.id },
       });
     }
 
@@ -156,10 +158,27 @@ export function useEventNotifications(events: CalendarEvent[]) {
     if (typeof window === "undefined" || !(window as unknown as Record<string, unknown>).Capacitor) return;
 
     import("@capacitor/local-notifications").then(({ LocalNotifications }) => {
-      LocalNotifications.addListener("localNotificationActionPerformed", () => {
-        // 알림 클릭 시 캘린더 페이지로 이동
-        if (window.location.pathname !== "/calendar") {
+      // 알림 클릭 시 해당 일정의 캘린더 페이지로 이동
+      LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+        const eventId = action.notification?.extra?.eventId;
+        if (eventId) {
+          window.location.href = `/calendar?eventId=${eventId}`;
+        } else if (window.location.pathname !== "/calendar") {
           window.location.href = "/calendar";
+        }
+      });
+
+      // 알림 발생 시 참석자에게 FCM 전송 요청
+      LocalNotifications.addListener("localNotificationReceived", (notification) => {
+        const eventId = notification?.extra?.eventId;
+        if (eventId) {
+          const token = typeof localStorage !== "undefined" ? localStorage.getItem("lifesync_token") : null;
+          if (token) {
+            fetch(`/api/calendar/${eventId}/notify`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {});
+          }
         }
       });
     }).catch(() => {});

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { eq, and, or, gte, lt, lte, isNotNull } from "drizzle-orm";
+import { eq, and, or, gte, lt, lte, isNotNull, inArray } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server"
 import * as schema from "@/lib/db/schema";
 import { requireAuth } from "@/lib/auth/session";
@@ -68,7 +68,44 @@ export async function GET(request: NextRequest) {
     )
     .orderBy(schema.calendarEvents.startDate);
 
-  return Response.json({ success: true, data: { events } });
+  // 공유 일정의 참석자 정보 추가
+  const sharedEventIds = events.filter((e) => e.isShared).map((e) => e.id);
+  const participantsMap: Record<string, { userId: string; nickname: string | null; profileImage: string | null }[]> = {};
+
+  if (sharedEventIds.length > 0) {
+    const allParticipants = await db
+      .select({
+        eventId: schema.eventParticipants.eventId,
+        userId: schema.eventParticipants.userId,
+        status: schema.eventParticipants.status,
+        nickname: schema.users.nickname,
+        profileImage: schema.users.profileImage,
+      })
+      .from(schema.eventParticipants)
+      .leftJoin(schema.users, eq(schema.eventParticipants.userId, schema.users.id))
+      .where(
+        and(
+          inArray(schema.eventParticipants.eventId, sharedEventIds),
+          eq(schema.eventParticipants.status, "joined")
+        )
+      );
+
+    for (const p of allParticipants) {
+      if (!participantsMap[p.eventId]) participantsMap[p.eventId] = [];
+      participantsMap[p.eventId].push({
+        userId: p.userId,
+        nickname: p.nickname,
+        profileImage: p.profileImage,
+      });
+    }
+  }
+
+  const eventsWithParticipants = events.map((e) => ({
+    ...e,
+    participants: participantsMap[e.id] ?? [],
+  }));
+
+  return Response.json({ success: true, data: { events: eventsWithParticipants } });
 }
 
 // POST /api/calendar

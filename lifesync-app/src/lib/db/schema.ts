@@ -110,6 +110,19 @@ export const calendarEvents = sqliteTable("calendar_events", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+// ==================== EVENT PARTICIPANTS ====================
+export const eventParticipants = sqliteTable("event_participants", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id")
+    .notNull()
+    .references(() => calendarEvents.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  status: text("status", { enum: ["joined", "declined"] }).default("joined").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
 // ==================== NOTIFICATIONS ====================
 export const notifications = sqliteTable("notifications", {
   id: text("id").primaryKey(),
@@ -162,8 +175,14 @@ export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
   user: one(users, { fields: [commentLikes.userId], references: [users.id] }),
 }));
 
-export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
+export const calendarEventsRelations = relations(calendarEvents, ({ one, many }) => ({
   user: one(users, { fields: [calendarEvents.userId], references: [users.id] }),
+  participants: many(eventParticipants),
+}));
+
+export const eventParticipantsRelations = relations(eventParticipants, ({ one }) => ({
+  event: one(calendarEvents, { fields: [eventParticipants.eventId], references: [calendarEvents.id] }),
+  user: one(users, { fields: [eventParticipants.userId], references: [users.id] }),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({

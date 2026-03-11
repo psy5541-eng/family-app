@@ -7,6 +7,7 @@ import type {
   feedLikes,
   feedComments,
   calendarEvents,
+  eventParticipants,
   notifications,
 } from "@/lib/db/schema";
 
@@ -30,6 +31,9 @@ export type NewFeedComment = InferInsertModel<typeof feedComments>;
 
 export type CalendarEvent = InferSelectModel<typeof calendarEvents>;
 export type NewCalendarEvent = InferInsertModel<typeof calendarEvents>;
+
+export type EventParticipant = InferSelectModel<typeof eventParticipants>;
+export type NewEventParticipant = InferInsertModel<typeof eventParticipants>;
 
 export type Notification = InferSelectModel<typeof notifications>;
 export type NewNotification = InferInsertModel<typeof notifications>;
