@@ -19,7 +19,13 @@
       "Bash(ipconfig)",
       "Bash(CAP_DEV=true npx cap sync android)",
       "Bash(npx cap open android)",
-      "Bash(grep -l \"getLocalDb\" d:/vscode/family-app/lifesync-app/src/app/api/**/*.ts d:/vscode/family-app/lifesync-app/src/app/api/**/**/*.ts)"
+      "Bash(grep -l \"getLocalDb\" d:/vscode/family-app/lifesync-app/src/app/api/**/*.ts d:/vscode/family-app/lifesync-app/src/app/api/**/**/*.ts)",
+      "Bash(git -C d:/openclaw/cursor/family-app log --oneline -10)",
+      "Bash(git -C d:/openclaw/cursor/family-app log --oneline -20)",
+      "Bash(npx next:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -r \"STOCK_API_KEY\\\\|NAVER_MAP\\\\|EMAIL\" /d/openclaw/cursor/family-app/lifesync-app --include=*.env*)",
+      "Bash(git pull:*)"
     ]
   }
 }

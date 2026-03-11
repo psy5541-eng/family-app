@@ -22,7 +22,7 @@ export type AuthContextType = {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
-  register: (email: string, password: string, nickname: string, profileImage?: string) => Promise<RegisterResult>;
+  register: (email: string, password: string, nickname: string, characterBase?: "male" | "female") => Promise<RegisterResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   getAuthHeader: () => Record<string, string>;
@@ -106,12 +106,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   );
 
   const register = useCallback(
-    async (email: string, password: string, nickname: string, profileImage?: string): Promise<RegisterResult> => {
+    async (email: string, password: string, nickname: string, characterBase?: "male" | "female"): Promise<RegisterResult> => {
       try {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, nickname, profileImage }),
+          body: JSON.stringify({ email, password, nickname, characterBase }),
         });
         const json = await res.json();
 

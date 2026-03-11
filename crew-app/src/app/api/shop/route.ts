@@ -52,22 +52,8 @@ export async function GET(request: NextRequest) {
     .where(eq(schema.userInventory.userId, user.id));
   const ownedIds = new Set(inventory.map((i) => i.itemId));
 
-  // 유저 캐릭터 (장착 여부)
-  const character = await db
-    .select()
-    .from(schema.userCharacters)
-    .where(eq(schema.userCharacters.userId, user.id))
-    .limit(1)
-    .then((r) => r[0]);
-
+  // 장착 여부 (TODO: 장착 필드 추가 후 구현)
   const equippedIds = new Set<string>();
-  if (character) {
-    if (character.equippedHat) equippedIds.add(character.equippedHat);
-    if (character.equippedTop) equippedIds.add(character.equippedTop);
-    if (character.equippedBottom) equippedIds.add(character.equippedBottom);
-    if (character.equippedShoes) equippedIds.add(character.equippedShoes);
-    if (character.equippedCharEffect) equippedIds.add(character.equippedCharEffect);
-  }
 
   // 유저 포인트
   const points = await db

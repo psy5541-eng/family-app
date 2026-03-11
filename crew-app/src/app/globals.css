@@ -66,6 +66,18 @@
   }
 }
 
+/* ==================== 로그인 화면 애니메이션 ==================== */
+
+@keyframes cloud {
+  from { transform: translateX(calc(100vw)); }
+  to { transform: translateX(-80px); }
+}
+
+@keyframes trackMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(-10%); }
+}
+
 /* ==================== 텍스트 효과 ==================== */
 
 /* 반짝임 효과 */

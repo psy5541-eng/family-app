@@ -138,7 +138,7 @@ export const userCharacters = sqliteTable("user_characters", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" })
     .unique(),
-  base: text("base", { enum: ["male", "female"] }).default("male").notNull(),
+  base: text("base", { enum: ["unknown", "male", "female"] }).default("unknown").notNull(),
   skinTone: text("skin_tone").default("#FFDBB4"),
   equippedHat: text("equipped_hat").references(() => shopItems.id),
   equippedTop: text("equipped_top").references(() => shopItems.id),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFCM } from "@/hooks/useFCM";
@@ -11,7 +11,8 @@ import Header from "@/components/layout/Header";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, getAuthHeader } = useAuth();
+  const [characterChecked, setCharacterChecked] = useState(false);
   useFCM(); // FCM 토큰 등록 + 포그라운드 메시지 처리
 
   const handleRefresh = useCallback(async () => {
@@ -27,8 +28,27 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // 인증 확인 중 스피너
-  if (isLoading) {
+  // 캐릭터 미선택 시 선택 페이지로 이동
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+    async function checkCharacter() {
+      try {
+        const res = await fetch("/api/character", { headers: getAuthHeader() });
+        const json = await res.json();
+        if (json.success && json.data.base === "unknown") {
+          router.replace("/character-select");
+          return;
+        }
+      } catch {
+        // 에러 시 그냥 진행
+      }
+      setCharacterChecked(true);
+    }
+    checkCharacter();
+  }, [isLoading, isAuthenticated, getAuthHeader, router]);
+
+  // 인증 확인 중 또는 캐릭터 체크 중 스피너
+  if (isLoading || !characterChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />

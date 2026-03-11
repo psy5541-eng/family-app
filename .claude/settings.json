@@ -5,15 +5,12 @@
       "Bash(npm run db:migrate)",
       "Bash(node -e \"const Database = require\\(''better-sqlite3''\\); const db = new Database\\(''./local.db''\\); const tables = db.prepare\\(\"\"SELECT name FROM sqlite_master WHERE type=''table''\"\"\\).all\\(\\); console.log\\(''테이블 목록:'', tables.map\\(t=>t.name\\).join\\('', ''\\)\\);\")",
       "Bash(npm install sharp @aws-sdk/client-s3)",
-      "WebFetch(domain:news.naver.com)",
-      "Bash(curl -s \"http://localhost:3000/api/news\")",
-      "Bash(curl -s \"http://localhost:3001/api/news\")",
-      "Bash(curl -s \"http://localhost:3001/api/naver/place?query=%EA%B0%95%EB%82%A8\")",
-      "Bash(pkill -f \"next dev\")",
-      "Bash(npx wrangler pages deployment list --project-name=family-app-1x2)",
-      "Bash(npx wrangler d1 execute lifesync-db --remote --command=\"UPDATE users SET role = ''admin'' WHERE email = ''zzo777@naver.com'';\")",
-      "Bash(curl -s \"https://family-app-1x2.pages.dev/api/news\")",
-      "Bash(curl -s \"https://family-app-1x2.pages.dev/api/weather?lat=37.5&lon=127.0\")"
+      "Bash(ls d:/openclaw/cursor/family-app/lifesync-app/src/app/api/feed/[id]/comments/)",
+      "Bash(npx wrangler:*)",
+      "Bash(npx tsc:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\park\\.claude\\projects\\d--openclaw-cursor-family-app"
     ]
   }
 }

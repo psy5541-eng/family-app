@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     password?: string;
     nickname?: string;
     profileImage?: string;
+    characterBase?: "male" | "female";
   };
 
   // ── 유효성 검사 ────────────────────────────────────────────
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
   await db.insert(schema.userCharacters).values({
     id: crypto.randomUUID(),
     userId,
-    base: "male",
+    base: body.characterBase ?? "unknown",
     skinTone: "#FFDBB4",
   });
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/useAuth";
@@ -81,6 +82,17 @@ export default function LoginForm() {
     router.replace("/dashboard");
   }
 
+  // 달리기 애니메이션: 6프레임 사이클
+  const [runFrame, setRunFrame] = useState(1);
+
+  useEffect(() => {
+    if (showAutoLoginPrompt) return; // 프롬프트 표시 중에는 애니메이션 불필요
+    const interval = setInterval(() => {
+      setRunFrame((f) => (f % 6) + 1);
+    }, 120);
+    return () => clearInterval(interval);
+  }, [showAutoLoginPrompt]);
+
   function handleSocialLogin(provider: "google" | "naver") {
     setIsLoading(true);
     window.location.href = `/api/auth/${provider}`;
@@ -123,54 +135,66 @@ export default function LoginForm() {
         </p>
 
         {/* 캐릭터 + 트랙 */}
-        <div className="mt-5 mx-5 rounded-2xl overflow-hidden relative h-36">
+        <div className="mt-5 mx-5 rounded-2xl overflow-hidden relative h-56">
           {/* 하늘 */}
           <div className="absolute inset-0 bg-gradient-to-b from-sky-300 to-sky-400 dark:from-sky-600 dark:to-sky-700" />
-          {/* 구름 */}
-          <div className="absolute top-3 left-6 w-12 h-4 bg-white/60 rounded-full" />
-          <div className="absolute top-6 right-8 w-16 h-5 bg-white/40 rounded-full" />
+          {/* 구름 - 흘러가는 애니메이션 */}
+          <div className="absolute top-3 animate-[cloud_8s_linear_infinite]">
+            <div className="w-12 h-4 bg-white/60 rounded-full" />
+          </div>
+          <div className="absolute top-7 animate-[cloud_12s_linear_infinite] [animation-delay:-4s]">
+            <div className="w-16 h-5 bg-white/40 rounded-full" />
+          </div>
+          <div className="absolute top-4 animate-[cloud_10s_linear_infinite] [animation-delay:-7s]">
+            <div className="w-10 h-3 bg-white/50 rounded-full" />
+          </div>
           {/* 잔디 */}
-          <div className="absolute bottom-10 left-0 right-0 h-4 bg-green-500" />
+          <div className="absolute bottom-10 left-0 right-0 h-4 bg-green-500 dark:bg-green-600" />
+          {/* 잔디 디테일 */}
+          <div className="absolute bottom-[38px] left-0 right-0 h-2 flex items-end justify-around">
+            {[...Array(16)].map((_, i) => (
+              <div key={i} className="w-[3px] bg-green-600 dark:bg-green-700 rounded-t-full" style={{ height: `${4 + (i % 3) * 2}px` }} />
+            ))}
+          </div>
           {/* 트랙 */}
           <div className="absolute bottom-0 left-0 right-0 h-10 bg-[#D2691E]" />
           <div className="absolute bottom-4 left-0 right-0 h-[2px] bg-white/40" />
           <div className="absolute bottom-6 left-0 right-0 h-[2px] bg-white/40" />
-          {/* 트랙 라인 */}
-          <div className="absolute bottom-0 left-0 right-0 h-10 flex items-center justify-around px-2">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="w-4 h-[2px] bg-white/50" />
-            ))}
+          {/* 트랙 라인 - 움직이는 점선 */}
+          <div className="absolute bottom-0 left-0 right-0 h-10 overflow-hidden">
+            <div className="flex items-center justify-around px-2 h-full animate-[trackMove_1s_linear_infinite]" style={{ width: "200%", marginLeft: "-50%" }}>
+              {[...Array(20)].map((_, i) => (
+                <div key={i} className="w-4 h-[2px] bg-white/50 shrink-0" />
+              ))}
+            </div>
           </div>
 
-          {/* 달리는 캐릭터 SVG */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-            <svg viewBox="0 0 48 64" className="w-14 h-[72px]" fill="none">
-              {/* 머리 */}
-              <circle cx="24" cy="12" r="9" fill="#FFDBB4" />
-              {/* 머리카락 */}
-              <ellipse cx="24" cy="7" rx="9" ry="5" fill="#8B4513" />
-              {/* 눈 */}
-              <circle cx="21" cy="11" r="1.2" fill="#333" />
-              <circle cx="27" cy="11" r="1.2" fill="#333" />
-              {/* 미소 */}
-              <path d="M22 15 Q24 17 26 15" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-              {/* 몸통 (흰색 러닝셔츠) */}
-              <path d="M16 21 L32 21 L30 38 L18 38 Z" fill="white" />
-              <path d="M16 21 L32 21 L30 38 L18 38 Z" stroke="#E5E7EB" strokeWidth="0.5" fill="none" />
-              {/* 뒷팔 */}
-              <path d="M30 24 L38 18" stroke="#FFDBB4" strokeWidth="4" strokeLinecap="round" />
-              {/* 앞팔 */}
-              <path d="M18 24 L10 30" stroke="#FFDBB4" strokeWidth="4" strokeLinecap="round" />
-              {/* 바지 */}
-              <path d="M18 37 L15 50" stroke="#1E40AF" strokeWidth="6" strokeLinecap="round" />
-              <path d="M30 37 L34 48" stroke="#1E40AF" strokeWidth="6" strokeLinecap="round" />
-              {/* 신발 */}
-              <ellipse cx="13" cy="52" rx="5" ry="3" fill="#FF4500" />
-              <ellipse cx="36" cy="50" rx="5" ry="3" fill="#FF4500" />
-              {/* 신발 줄 */}
-              <line x1="11" y1="52" x2="15" y2="52" stroke="white" strokeWidth="0.8" />
-              <line x1="34" y1="50" x2="38" y2="50" stroke="white" strokeWidth="0.8" />
-            </svg>
+          {/* 달리는 도트 캐릭터 2명 */}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-0 items-end">
+            {/* 남자 캐릭터 */}
+            <div className="w-[156px] h-[156px] relative" style={{ imageRendering: "pixelated" }}>
+              <Image
+                src={`/assets/character/run/run-male-${runFrame}.png`}
+                alt="남자 캐릭터"
+                width={128}
+                height={128}
+                className="w-full h-full object-contain"
+                priority
+                unoptimized
+              />
+            </div>
+            {/* 여자 캐릭터 */}
+            <div className="w-[156px] h-[156px] relative" style={{ imageRendering: "pixelated" }}>
+              <Image
+                src={`/assets/character/run/run-female-${runFrame}.png`}
+                alt="여자 캐릭터"
+                width={128}
+                height={128}
+                className="w-full h-full object-contain"
+                priority
+                unoptimized
+              />
+            </div>
           </div>
         </div>
       </div>

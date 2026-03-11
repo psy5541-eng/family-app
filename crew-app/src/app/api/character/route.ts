@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     return Response.json({
       success: true,
       data: {
-        base: "male",
+        base: "unknown",
         skinTone: "#FFDBB4",
         equippedHat: null,
         equippedTop: null,
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json() as {
-    base?: "male" | "female";
+    base?: "unknown" | "male" | "female";
     skinTone?: string;
     equippedHat?: string | null;
     equippedTop?: string | null;

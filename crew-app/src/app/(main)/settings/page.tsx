@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -236,66 +237,37 @@ export default function SettingsPage() {
   const { user, logout, refreshUser, getAuthHeader } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [nickname, setNickname] = useState(user?.nickname ?? "");
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [autoLogin, setAutoLogin] = useState(() => {
     if (typeof window === "undefined") return true;
     return !localStorage.getItem("crew_no_auto_login");
   });
-  const [profilePreview, setProfilePreview] = useState<string | null>(user?.profileImage ?? null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [characterBase, setCharacterBase] = useState<"unknown" | "male" | "female">("unknown");
+  const [characterLoading, setCharacterLoading] = useState(true);
+
   function showMessage(type: "success" | "error", text: string) {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 3000);
   }
 
-  async function handleProfileImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      showMessage("error", "이미지 파일만 선택 가능합니다.");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      showMessage("error", "이미지는 최대 10MB까지 가능합니다.");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const formData = new FormData();
-      formData.append("files", file);
-      formData.append("purpose", "profile");
-
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        headers: getAuthHeader(),
-        body: formData,
-      });
-      const uploadJson = await uploadRes.json();
-      if (!uploadJson.success || !uploadJson.data.files[0]) {
-        showMessage("error", "이미지 업로드에 실패했습니다.");
-        return;
+  // 캐릭터 정보 로드
+  useEffect(() => {
+    async function loadCharacter() {
+      try {
+        const res = await fetch("/api/character", { headers: getAuthHeader() });
+        const json = await res.json();
+        if (json.success) {
+          setCharacterBase(json.data.base ?? "unknown");
+        }
+      } finally {
+        setCharacterLoading(false);
       }
-
-      const imageUrl = uploadJson.data.files[0].url;
-      const res = await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ profileImage: imageUrl }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        setProfilePreview(imageUrl);
-        await refreshUser();
-        showMessage("success", "프로필 사진이 변경되었습니다.");
-      }
-    } finally {
-      setIsSaving(false);
     }
-  }
+    loadCharacter();
+  }, [getAuthHeader]);
 
   async function handleNicknameSave() {
     if (!nickname.trim() || nickname === user?.nickname) {
@@ -346,25 +318,25 @@ export default function SettingsPage() {
         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">프로필</h3>
 
         <div className="flex items-center gap-4 mb-1">
-          <div
-            className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {profilePreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profilePreview} alt="프로필" className="w-full h-full object-cover" />
+          {/* 캐릭터 아바타 */}
+          <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+            {characterBase !== "unknown" ? (
+              <div className="w-full h-full flex items-center justify-center" style={{ imageRendering: "pixelated" }}>
+                <Image
+                  src={`/assets/character/base/${characterBase}-stand.png`}
+                  alt="내 캐릭터"
+                  width={128}
+                  height={128}
+                  className="w-14 h-14 object-contain"
+                  unoptimized
+                />
+              </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xl font-semibold text-gray-500 dark:text-gray-300">
                 {user?.nickname?.charAt(0)?.toUpperCase() ?? "?"}
               </div>
             )}
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-              </svg>
-            </div>
           </div>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProfileImageChange} className="hidden" />
 
           <div className="flex-1 min-w-0 overflow-hidden">
             {isEditingNickname ? (

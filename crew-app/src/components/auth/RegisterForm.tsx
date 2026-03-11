@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { isValidPassword } from "@/lib/utils/validation";
 
-// 이 앱에서는 프로필 사진 대신 캐릭터 시스템 사용
-
 type PasswordStrength = "weak" | "fair" | "strong";
 
 function getPasswordStrength(password: string): PasswordStrength {
@@ -106,7 +104,7 @@ export default function RegisterForm() {
       const result = await register(form.email.trim(), form.password, form.nickname.trim());
 
       if (result.success) {
-        router.replace("/dashboard");
+        router.replace("/character-select");
       } else {
         setError(result.error);
         setIsLoading(false);

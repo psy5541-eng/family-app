@@ -1,6 +1,6 @@
 /**
  * R2 스토리지 유틸리티
- * - 로컬 개발: .uploads/ 디스크 저장
+ * - 로컬 개발: S3 호환 API로 R2 직접 접근
  * - 프로덕션 (Cloudflare Pages): R2 바인딩 직접 사용
  */
 
@@ -18,6 +18,20 @@ type R2Bucket = {
 type CloudflareEnv = {
   R2?: R2Bucket;
 };
+
+// S3 클라이언트 (로컬 개발용 - R2 S3 호환 API)
+function getS3Client() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { S3Client } = require("@aws-sdk/client-s3");
+  return new S3Client({
+    region: "auto",
+    endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
+    credentials: {
+      accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ?? "",
+      secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ?? "",
+    },
+  });
+}
 
 function getCloudflareR2(): R2Bucket | null {
   try {
@@ -57,14 +71,18 @@ export async function uploadToR2(
     throw new Error("R2 binding not found. Check Cloudflare Pages bindings settings.");
   }
 
-  // 로컬 개발: 디스크에 저장
-  console.warn("[R2] 로컬 개발 모드 - .uploads/ 저장");
-  const fs = await import("fs/promises");
-  const path = await import("path");
-  const uploadDir = path.join(process.cwd(), ".uploads", path.dirname(key));
-  await fs.mkdir(uploadDir, { recursive: true });
-  const buf = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
-  await fs.writeFile(path.join(process.cwd(), ".uploads", key), buf);
+  // 로컬 개발: S3 호환 API
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PutObjectCommand } = require("@aws-sdk/client-s3");
+  const s3 = getS3Client();
+  const body = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
+  await s3.send(new PutObjectCommand({
+    Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+    CacheControl: "public, max-age=31536000",
+  }));
   return { url: `/api/media/${key}`, key };
 }
 
@@ -82,11 +100,15 @@ export async function deleteFromR2(key: string): Promise<void> {
     return;
   }
 
-  // 로컬: 파일 삭제
+  // 로컬: S3 호환 API
   try {
-    const fs = await import("fs/promises");
-    const path = await import("path");
-    await fs.unlink(path.join(process.cwd(), ".uploads", key));
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+    const s3 = getS3Client();
+    await s3.send(new DeleteObjectCommand({
+      Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
+      Key: key,
+    }));
   } catch {
     // 파일 없으면 무시
   }
@@ -109,18 +131,24 @@ export async function getFromR2(key: string): Promise<{ buffer: ArrayBuffer; con
     return null;
   }
 
-  // 로컬
+  // 로컬: S3 호환 API
   try {
-    const fs = await import("fs/promises");
-    const path = await import("path");
-    const filePath = path.join(process.cwd(), ".uploads", key);
-    const data = await fs.readFile(filePath);
-    const ext = path.extname(key).toLowerCase();
-    const mimeMap: Record<string, string> = {
-      ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-      ".png": "image/png", ".gif": "image/gif", ".mp4": "video/mp4",
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { GetObjectCommand } = require("@aws-sdk/client-s3");
+    const s3 = getS3Client();
+    const res = await s3.send(new GetObjectCommand({
+      Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
+      Key: key,
+    }));
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of res.Body) {
+      chunks.push(chunk);
+    }
+    const buf = Buffer.concat(chunks);
+    return {
+      buffer: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+      contentType: res.ContentType ?? "application/octet-stream",
     };
-    return { buffer: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), contentType: mimeMap[ext] ?? "application/octet-stream" };
   } catch {
     return null;
   }
