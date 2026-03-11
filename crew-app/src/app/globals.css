@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+@layer base {
+  body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    /* 모바일 최적화 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* safe area는 헤더/바텀네비에서 개별 처리 */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* 바텀 네비게이션 높이 (safe area 포함) */
+  .pb-bottom-nav {
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* 스크롤 스냅 */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll-snap-start {
+    scroll-snap-align: start;
+  }
+
+  /* 스크롤바 숨기기 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ==================== 텍스트 효과 ==================== */
+
+/* 반짝임 효과 */
+.text-effect-sparkle {
+  animation: sparkle 1.5s ease-in-out infinite;
+  text-shadow: 0 0 4px rgba(255, 215, 0, 0.6), 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+/* 무지개 효과 */
+.text-effect-rainbow {
+  animation: rainbow 3s linear infinite;
+  font-weight: 700;
+}
+
+/* 불꽃 효과 */
+.text-effect-flame {
+  animation: flame 1.5s ease-in-out infinite;
+  color: #ff4500;
+}
+
+/* 글로우 효과 */
+.text-effect-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* 네온 효과 */
+.text-effect-neon {
+  animation: neon 2s ease-in-out infinite;
+  font-weight: 700;
+}
+
+/* 그라디언트 효과 */
+.text-effect-gradient {
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

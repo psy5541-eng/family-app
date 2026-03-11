@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1773106043888,
+      "tag": "0000_lazy_cardiac",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1773200000000,
+      "tag": "0001_comment_replies_likes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773300000000,
+      "tag": "0002_calendar_shared_color",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1773218290965,
+      "tag": "0003_heavy_mystique",
+      "breakpoints": true
+    }
+  ]
+}
