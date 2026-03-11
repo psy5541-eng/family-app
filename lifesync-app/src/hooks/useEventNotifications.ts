@@ -146,6 +146,24 @@ function hashCode(str: string): number {
 
 export function useEventNotifications(events: CalendarEvent[]) {
   const prevEventsRef = useRef<string>("");
+  const listenerSetRef = useRef(false);
+
+  // 알림 클릭 리스너 (한 번만 등록)
+  useEffect(() => {
+    if (listenerSetRef.current) return;
+    listenerSetRef.current = true;
+
+    if (typeof window === "undefined" || !(window as unknown as Record<string, unknown>).Capacitor) return;
+
+    import("@capacitor/local-notifications").then(({ LocalNotifications }) => {
+      LocalNotifications.addListener("localNotificationActionPerformed", () => {
+        // 알림 클릭 시 캘린더 페이지로 이동
+        if (window.location.pathname !== "/calendar") {
+          window.location.href = "/calendar";
+        }
+      });
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const key = events
