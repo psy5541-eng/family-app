@@ -27,8 +27,7 @@
     /* 모바일 최적화 */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* iOS safe area */
-    padding-top: env(safe-area-inset-top);
+    /* safe area는 헤더/바텀네비에서 개별 처리 */
     padding-bottom: env(safe-area-inset-bottom);
   }
 

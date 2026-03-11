@@ -23,7 +23,10 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 h-14 flex items-center justify-between">
+    <header
+      className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 h-14 flex items-center justify-between"
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+    >
       <h1 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h1>
 
       {user && (
