@@ -2,18 +2,23 @@
 
 import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/useAuth";
 import { useFCM } from "@/hooks/useFCM";
-import { useBackButton } from "@/hooks/useBackButton";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import BottomNav from "@/components/layout/BottomNav";
 import Header from "@/components/layout/Header";
+
+// SSR 제외 — Capacitor 네이티브 브릿지 필요, 클라이언트에서만 로드
+const BackButtonHandler = dynamic(
+  () => import("@/components/layout/BackButtonHandler"),
+  { ssr: false }
+);
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   useFCM(); // FCM 토큰 등록 + 포그라운드 메시지 처리
-  useBackButton(); // Android 뒤로가기 2회 종료
 
   const handleRefresh = useCallback(async () => {
     window.location.reload();
@@ -40,6 +45,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <BackButtonHandler />
       <Header />
       <main className="flex-1 pb-bottom-nav">{children}</main>
       <BottomNav />
