@@ -14,7 +14,7 @@ async function fetchNaverNews(): Promise<NewsItem[]> {
   const clientSecret = process.env.NAVER_SEARCH_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    console.error("Naver Search API keys not found:", { hasId: !!clientId, hasSecret: !!clientSecret });
+    console.error("Naver Search API keys not found");
     return [];
   }
 
@@ -53,12 +53,10 @@ export async function GET(_request: NextRequest) {
   const news = await fetchNaverNews();
 
   if (news.length === 0) {
-    const hasId = !!process.env.NAVER_SEARCH_CLIENT_ID;
-    const hasSecret = !!process.env.NAVER_SEARCH_CLIENT_SECRET;
     return Response.json({
       success: true,
       data: {
-        news: [{ title: "뉴스를 불러올 수 없습니다.", link: "https://news.naver.com", description: `env: id=${hasId}, secret=${hasSecret}`, pubDate: new Date().toISOString(), source: "LifeSync" }],
+        news: [{ title: "뉴스를 불러올 수 없습니다.", link: "https://news.naver.com", description: "네이버 뉴스에서 확인하세요.", pubDate: new Date().toISOString(), source: "LifeSync" }],
         updatedAt: new Date().toISOString(),
       },
     });
