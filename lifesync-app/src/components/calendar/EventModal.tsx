@@ -52,7 +52,6 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPlaceSearch, setShowPlaceSearch] = useState(false);
-  const [mapFailed, setMapFailed] = useState(false);
 
   function handleSelectPlace(place: { id: string; name: string; address: string; roadAddress: string; latitude: string; longitude: string }) {
     setPlaceName(place.name);
@@ -258,23 +257,14 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
             {/* C6: 장소 지도 카드 (장소 + 좌표가 있을 때) */}
             {placeName && latitude && longitude && (
               <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
-                {/* 지도 미리보기: NCP 실패 시 OSM 폴백 */}
+                {/* 지도 미리보기 (OpenStreetMap) */}
                 <div className="relative w-full h-32 bg-gray-100 dark:bg-gray-700">
-                  {!mapFailed ? (
-                    <img
-                      src={`/api/naver/static-map?lat=${latitude}&lng=${longitude}&w=400&h=200`}
-                      alt={`${placeName} 지도`}
-                      className="w-full h-full object-cover"
-                      onError={() => setMapFailed(true)}
-                    />
-                  ) : (
-                    <iframe
-                      title="지도 미리보기"
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(longitude)-0.004},${Number(latitude)-0.003},${Number(longitude)+0.004},${Number(latitude)+0.003}&layer=mapnik&marker=${latitude},${longitude}`}
-                      className="w-full h-full border-0"
-                      style={{ pointerEvents: "none" }}
-                    />
-                  )}
+                  <iframe
+                    title="지도 미리보기"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(longitude)-0.004},${Number(latitude)-0.003},${Number(longitude)+0.004},${Number(latitude)+0.003}&layer=mapnik&marker=${latitude},${longitude}`}
+                    className="w-full h-full border-0"
+                    style={{ pointerEvents: "none" }}
+                  />
                 </div>
                 {/* 하단 바: 네이버 지도 + T맵 */}
                 <div className="px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50">
