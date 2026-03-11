@@ -166,6 +166,7 @@ export default function CalendarPage() {
                 events={events}
                 year={currentYear}
                 month={currentMonth}
+                currentUserId={user?.id}
                 onEventClick={openEdit}
               />
             </div>
@@ -285,6 +286,7 @@ export default function CalendarPage() {
                 events={events}
                 year={currentYear}
                 month={currentMonth}
+                currentUserId={user?.id}
                 onEventClick={openEdit}
               />
             )}

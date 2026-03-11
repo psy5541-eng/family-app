@@ -7,6 +7,7 @@ type EventListViewProps = {
   events: CalendarEvent[];
   year: number;
   month: number;
+  currentUserId?: string;
   onEventClick: (event: CalendarEvent) => void;
 };
 
@@ -45,7 +46,7 @@ function groupByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
   return map;
 }
 
-export default function EventListView({ events, year, month, onEventClick }: EventListViewProps) {
+export default function EventListView({ events, year, month, currentUserId, onEventClick }: EventListViewProps) {
   const grouped = groupByDate(events);
 
   if (events.length === 0) {
@@ -110,11 +111,15 @@ export default function EventListView({ events, year, month, onEventClick }: Eve
             <div className="space-y-1.5 pl-1">
               {dayEvents.map((event) => {
                 const color = getEventColor(event.id);
+                const ev = event as CalendarEvent & { ownerNickname?: string; isShared?: boolean };
+                const isOwner = !currentUserId || event.userId === currentUserId;
                 return (
                   <button
                     key={event.id}
-                    onClick={() => onEventClick(event)}
-                    className="w-full flex items-start gap-2.5 text-left py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors -mx-1 px-1"
+                    onClick={() => isOwner ? onEventClick(event) : undefined}
+                    className={`w-full flex items-start gap-2.5 text-left py-1.5 rounded-lg transition-colors -mx-1 px-1 ${
+                      isOwner ? "hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" : "cursor-default"
+                    }`}
                   >
                     {/* 색상 바 */}
                     <div className={`w-1 min-h-[2rem] rounded-full ${color} flex-shrink-0 mt-0.5`} />
@@ -129,6 +134,11 @@ export default function EventListView({ events, year, month, onEventClick }: Eve
                             {calcDday(event.startDate)}
                           </span>
                         )}
+                        {ev.isShared && (
+                          <span className="text-[10px] text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                            공유
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {event.isAllDay
@@ -141,17 +151,22 @@ export default function EventListView({ events, year, month, onEventClick }: Eve
                           {event.placeName}
                         </p>
                       )}
+                      {!isOwner && ev.ownerNickname && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">{ev.ownerNickname}님의 일정</p>
+                      )}
                     </div>
 
-                    <svg
-                      className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
+                    {isOwner && (
+                      <svg
+                        className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    )}
                   </button>
                 );
               })}
