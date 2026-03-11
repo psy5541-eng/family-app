@@ -17,6 +17,7 @@ export default function Header() {
   const title = PAGE_TITLES[pathname] ?? "LifeSync";
 
   async function handleLogout() {
+    if (!window.confirm("로그아웃 하시겠습니까?")) return;
     await logout();
     router.replace("/login");
   }
