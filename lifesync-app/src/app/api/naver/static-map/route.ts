@@ -15,8 +15,11 @@ export async function GET(request: NextRequest) {
   const keyId = process.env.NAVER_MAP_CLIENT_ID;
   const key = process.env.NAVER_MAP_CLIENT_SECRET;
 
+  // debug 모드
+  const debug = searchParams.get("debug") === "1";
+
   if (!keyId || !key) {
-    // 키 없으면 빈 이미지 반환
+    if (debug) return Response.json({ error: "keys_missing", keyId: !!keyId, key: !!key });
     return new Response(null, { status: 204 });
   }
 
@@ -30,6 +33,10 @@ export async function GET(request: NextRequest) {
     });
 
     if (!res.ok) {
+      if (debug) {
+        const text = await res.text();
+        return Response.json({ error: "ncp_error", status: res.status, body: text });
+      }
       return new Response(null, { status: 502 });
     }
 
