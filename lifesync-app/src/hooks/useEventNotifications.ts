@@ -12,15 +12,42 @@ function getNotifyLabel(minutes: number): string {
 }
 
 async function scheduleLocalNotifications(events: CalendarEvent[]) {
+  // Capacitor 환경 체크
+  if (typeof window === "undefined" || !(window as unknown as Record<string, unknown>).Capacitor) {
+    console.log("[알림] Capacitor 환경 아님 → 웹 fallback");
+    scheduleWebNotifications(events);
+    return;
+  }
+
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
 
+    // 알림 채널 생성 (Android 8+)
+    try {
+      await LocalNotifications.createChannel({
+        id: "calendar_events",
+        name: "일정 알림",
+        description: "캘린더 일정 알림",
+        importance: 5, // MAX
+        visibility: 1, // PUBLIC
+        vibration: true,
+        sound: "default",
+      });
+    } catch {
+      // 채널 이미 존재하거나 iOS인 경우
+    }
+
     // 권한 요청
     const perm = await LocalNotifications.requestPermissions();
-    if (perm.display !== "granted") return;
+    console.log("[알림] 권한 상태:", perm.display);
+    if (perm.display !== "granted") {
+      console.log("[알림] 권한 거부됨");
+      return;
+    }
 
     // 기존 예약 알림 전부 취소 후 재등록
     const pending = await LocalNotifications.getPending();
+    console.log("[알림] 기존 예약:", pending.notifications.length, "건");
     if (pending.notifications.length > 0) {
       await LocalNotifications.cancel(pending);
     }
@@ -30,8 +57,8 @@ async function scheduleLocalNotifications(events: CalendarEvent[]) {
       id: number;
       title: string;
       body: string;
+      channelId: string;
       schedule: { at: Date; allowWhileIdle: boolean };
-      smallIcon?: string;
     }[] = [];
 
     for (const event of events) {
@@ -44,23 +71,32 @@ async function scheduleLocalNotifications(events: CalendarEvent[]) {
       // 이미 지났거나 7일 이상 먼 일정은 무시
       if (notifyAt <= now || notifyAt - now > 7 * 86400000) continue;
 
-      // id는 고유해야 함 - eventId 해시 + minutesBefore
       const id = hashCode(`${event.id}_${minutesBefore}`);
 
       notifications.push({
         id,
         title: `📅 ${event.title}`,
         body: `${getNotifyLabel(minutesBefore)} 시작되는 일정입니다.`,
+        channelId: "calendar_events",
         schedule: { at: new Date(notifyAt), allowWhileIdle: true },
-        smallIcon: "ic_notification",
       });
     }
 
     if (notifications.length > 0) {
       await LocalNotifications.schedule({ notifications });
+      console.log("[알림] 스케줄 완료:", notifications.length, "건");
+      notifications.forEach((n) => {
+        console.log(`  - "${n.title}" @ ${n.schedule.at.toLocaleString()}`);
+      });
+    } else {
+      console.log("[알림] 스케줄할 알림 없음");
     }
-  } catch {
-    // Capacitor 플러그인 없는 환경 (웹 브라우저) → 웹 알림 fallback
+
+    // 확인: 현재 예약된 알림
+    const afterPending = await LocalNotifications.getPending();
+    console.log("[알림] 현재 예약된 알림:", afterPending.notifications.length, "건");
+  } catch (err) {
+    console.error("[알림] LocalNotifications 오류:", err);
     scheduleWebNotifications(events);
   }
 }
@@ -83,7 +119,6 @@ function scheduleWebNotifications(events: CalendarEvent[]) {
     const notifyAt = startTime - minutesBefore * 60 * 1000;
     const delay = notifyAt - now;
 
-    // 이미 지났거나 24시간 이상 먼 일정은 무시
     if (delay < -60000 || delay > 86400000) continue;
 
     if (delay <= 0) {
@@ -113,7 +148,6 @@ export function useEventNotifications(events: CalendarEvent[]) {
   const prevEventsRef = useRef<string>("");
 
   useEffect(() => {
-    // 이벤트가 동일하면 재스케줄 방지
     const key = events
       .filter((e) => e.notifyBefore !== null && e.notifyBefore !== undefined)
       .map((e) => `${e.id}_${e.notifyBefore}_${e.startDate}`)
