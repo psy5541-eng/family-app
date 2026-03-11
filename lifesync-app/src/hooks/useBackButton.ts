@@ -6,15 +6,26 @@ import { usePathname } from "next/navigation";
 const MAIN_TABS = ["/dashboard", "/feed", "/calendar", "/settings"];
 const GUARD_STATE = { __backGuard: true };
 
-// 팝업/모달 닫기 콜백 스택 (LIFO)
-const backHandlers: (() => void)[] = [];
+// window 전역 변수로 백 핸들러 스택 관리
+// (Next.js 번들 청크 분리 시 모듈 변수는 공유되지 않을 수 있음)
+type BackHandlerStack = (() => void)[];
+const BACK_HANDLER_KEY = "__lifesync_backHandlers";
+
+function getBackHandlers(): BackHandlerStack {
+  const win = window as unknown as Record<string, unknown>;
+  if (!win[BACK_HANDLER_KEY]) {
+    win[BACK_HANDLER_KEY] = [];
+  }
+  return win[BACK_HANDLER_KEY] as BackHandlerStack;
+}
 
 /** 모달/팝업이 열릴 때 등록, 닫힐 때 해제 */
 export function registerBackHandler(handler: () => void) {
-  backHandlers.push(handler);
+  const handlers = getBackHandlers();
+  handlers.push(handler);
   return () => {
-    const idx = backHandlers.indexOf(handler);
-    if (idx !== -1) backHandlers.splice(idx, 1);
+    const idx = handlers.indexOf(handler);
+    if (idx !== -1) handlers.splice(idx, 1);
   };
 }
 
@@ -84,9 +95,10 @@ export function useBackButton() {
       }
 
       // 팝업/모달이 열려있으면 닫기 우선
-      if (backHandlers.length > 0) {
+      const handlers = getBackHandlers();
+      if (handlers.length > 0) {
         window.history.pushState(GUARD_STATE, "");
-        const handler = backHandlers.pop()!;
+        const handler = handlers.pop()!;
         handler();
         return;
       }
