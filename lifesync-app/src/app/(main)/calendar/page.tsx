@@ -82,7 +82,7 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-4 fold-open:max-w-4xl flex flex-col" style={{ height: "calc(100vh - 7.5rem)" }}>
+    <div className="max-w-lg mx-auto px-4 py-4 fold-open:max-w-4xl flex flex-col overflow-y-auto pb-20" style={{ height: "calc(100vh - 7.5rem)" }}>
       {/* 월 네비게이션 */}
       <div className="flex items-center justify-between flex-shrink-0 mb-4">
         <button
@@ -176,10 +176,10 @@ export default function CalendarPage() {
           </div>
 
           {/* 좁은 화면 - 탭으로 전환 */}
-          <div className="fold-open:hidden flex flex-col flex-1 min-h-0">
+          <div className="fold-open:hidden flex flex-col">
             {viewMode === "calendar" ? (
               <>
-                <div className="flex-shrink-0">
+                <div>
                   <CalendarGrid
                     year={currentYear}
                     month={currentMonth}
@@ -189,9 +189,9 @@ export default function CalendarPage() {
                   />
                 </div>
 
-                {/* 선택된 날짜 일정 목록 - 스크롤 가능 */}
+                {/* 선택된 날짜 일정 목록 */}
                 {selectedDate && (
-                  <div className="flex-1 min-h-0 overflow-y-auto mt-4 space-y-2">
+                  <div className="mt-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         {selectedDate.toLocaleDateString("ko-KR", {
@@ -287,7 +287,7 @@ export default function CalendarPage() {
               </>
             ) : (
               /* C2: 리스트 뷰 */
-              <div className="flex-1 min-h-0 overflow-y-auto">
+              <div>
                 <EventListView
                   events={events}
                   year={currentYear}

@@ -278,18 +278,10 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const deepLink = `nmap://place?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(placeName)}&appname=com.lifesync.app`;
                         const webUrl = `https://map.naver.com/v5/search/${encodeURIComponent(placeName)}?c=${longitude},${latitude},15,0,0,0,dh`;
-                        let appOpened = false;
-                        const onHidden = () => { appOpened = true; };
-                        document.addEventListener("visibilitychange", onHidden);
-                        window.location.href = deepLink;
-                        setTimeout(() => {
-                          document.removeEventListener("visibilitychange", onHidden);
-                          if (!appOpened && !document.hidden) {
-                            window.open(webUrl, "_blank");
-                          }
-                        }, 1500);
+                        // Android Intent URI: 앱 있으면 앱 실행, 없으면 Play Store
+                        const intentUri = `intent://place?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(placeName)}&appname=com.lifesync.app#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
+                        window.location.href = intentUri;
                       }}
                       className="flex items-center gap-1 text-green-600"
                     >
@@ -304,17 +296,10 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const deepLink = `tmap://route?goalx=${longitude}&goaly=${latitude}&goalname=${encodeURIComponent(placeName)}`;
-                        let appOpened = false;
-                        const onHidden = () => { appOpened = true; };
-                        document.addEventListener("visibilitychange", onHidden);
-                        window.location.href = deepLink;
-                        setTimeout(() => {
-                          document.removeEventListener("visibilitychange", onHidden);
-                          if (!appOpened && !document.hidden) {
-                            window.open(`https://play.google.com/store/apps/details?id=com.skt.tmap.ku`, "_blank");
-                          }
-                        }, 1500);
+                        const playStoreUrl = `https://play.google.com/store/apps/details?id=com.skt.tmap.ku`;
+                        // Android Intent URI: 앱 있으면 앱 실행, 없으면 Play Store
+                        const intentUri = `intent://route?goalx=${longitude}&goaly=${latitude}&goalname=${encodeURIComponent(placeName)}#Intent;scheme=tmap;package=com.skt.tmap.ku;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`;
+                        window.location.href = intentUri;
                       }}
                       className="flex items-center gap-1 text-blue-500"
                     >
