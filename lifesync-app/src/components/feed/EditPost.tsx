@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FeedWithRelations } from "@/types/db";
+import { registerBackHandler } from "@/hooks/useBackButton";
 
 type EditPostProps = {
   feed: FeedWithRelations;
@@ -12,6 +13,9 @@ type EditPostProps = {
 export default function EditPost({ feed, onSave, onCancel }: EditPostProps) {
   const [content, setContent] = useState(feed.content ?? "");
   const [isSaving, setIsSaving] = useState(false);
+
+  // 뒤로가기 시 모달 닫기
+  useEffect(() => registerBackHandler(onCancel), [onCancel]);
 
   async function handleSave() {
     setIsSaving(true);

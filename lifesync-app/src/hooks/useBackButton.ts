@@ -6,6 +6,18 @@ import { usePathname } from "next/navigation";
 const MAIN_TABS = ["/dashboard", "/feed", "/calendar", "/settings"];
 const GUARD_STATE = { __backGuard: true };
 
+// 팝업/모달 닫기 콜백 스택 (LIFO)
+const backHandlers: (() => void)[] = [];
+
+/** 모달/팝업이 열릴 때 등록, 닫힐 때 해제 */
+export function registerBackHandler(handler: () => void) {
+  backHandlers.push(handler);
+  return () => {
+    const idx = backHandlers.indexOf(handler);
+    if (idx !== -1) backHandlers.splice(idx, 1);
+  };
+}
+
 /**
  * Android 뒤로가기 버튼 처리
  *
@@ -68,6 +80,14 @@ export function useBackButton() {
       // 프로그래밍 방식 back() 호출 시 발생하는 이벤트는 무시
       if (skipNextPopRef.current) {
         skipNextPopRef.current = false;
+        return;
+      }
+
+      // 팝업/모달이 열려있으면 닫기 우선
+      if (backHandlers.length > 0) {
+        window.history.pushState(GUARD_STATE, "");
+        const handler = backHandlers.pop()!;
+        handler();
         return;
       }
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MediaUploader from "./MediaUploader";
 import { useAuth } from "@/hooks/useAuth";
+import { registerBackHandler } from "@/hooks/useBackButton";
 
 type CreatePostProps = {
   onCreated: () => void;
@@ -15,6 +16,9 @@ export default function CreatePost({ onCreated, onCancel }: CreatePostProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 뒤로가기 시 모달 닫기
+  useEffect(() => registerBackHandler(onCancel), [onCancel]);
 
   async function handleSubmit() {
     if (!content.trim() && files.length === 0) {

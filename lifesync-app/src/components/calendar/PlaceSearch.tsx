@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { registerBackHandler } from "@/hooks/useBackButton";
 
 type PlaceItem = {
   id: string;
@@ -23,6 +24,9 @@ export default function PlaceSearch({ onSelect, onClose }: PlaceSearchProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 뒤로가기 시 모달 닫기
+  useEffect(() => registerBackHandler(onClose), [onClose]);
 
   async function handleSearch() {
     if (!query.trim()) return;

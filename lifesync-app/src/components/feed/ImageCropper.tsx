@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { registerBackHandler } from "@/hooks/useBackButton";
 
 type AspectRatio = "original" | "1:1" | "4:5" | "16:9";
 
@@ -25,6 +26,9 @@ export default function ImageCropper({ file, onCropped, onCancel }: ImageCropper
   const [isCropping, setIsCropping] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ startX: 0, startY: 0, startOffX: 0, startOffY: 0, dragging: false });
+
+  // 뒤로가기 시 모달 닫기
+  useEffect(() => registerBackHandler(onCancel), [onCancel]);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);

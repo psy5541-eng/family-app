@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { CalendarEvent } from "@/types/db";
 import type { EventFormData } from "@/hooks/useCalendar";
+import { registerBackHandler } from "@/hooks/useBackButton";
 import PlaceSearch from "./PlaceSearch";
 
 type EventModalProps = {
@@ -52,6 +53,9 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPlaceSearch, setShowPlaceSearch] = useState(false);
+
+  // 뒤로가기 시 모달 닫기
+  useEffect(() => registerBackHandler(onClose), [onClose]);
 
   function handleSelectPlace(place: { id: string; name: string; address: string; roadAddress: string; latitude: string; longitude: string }) {
     setPlaceName(place.name);
