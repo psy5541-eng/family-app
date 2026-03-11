@@ -10,8 +10,23 @@ type MediaCarouselProps = {
 };
 
 function MediaImage({ src, alt }: { src: string; alt: string }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className="w-full h-auto block" />;
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative w-full">
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700 min-h-[200px]">
+          <div className="w-8 h-8 border-3 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-auto block transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
 }
 
 function HeartAnimation({ show }: { show: boolean }) {

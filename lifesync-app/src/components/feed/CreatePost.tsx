@@ -82,7 +82,7 @@ export default function CreatePost({ onCreated, onCancel }: CreatePostProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
           <button
@@ -100,6 +100,14 @@ export default function CreatePost({ onCreated, onCancel }: CreatePostProps) {
             {isSubmitting ? "게시 중..." : "게시"}
           </button>
         </div>
+
+        {/* 업로드 로딩 오버레이 */}
+        {isSubmitting && (
+          <div className="absolute inset-0 z-20 bg-white/70 dark:bg-gray-800/70 flex flex-col items-center justify-center gap-3 rounded-t-2xl sm:rounded-2xl">
+            <div className="w-10 h-10 border-4 border-gray-200 border-t-primary-500 rounded-full animate-spin" />
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">업로드 중...</p>
+          </div>
+        )}
 
         {/* 본문 */}
         <div className="p-4 space-y-4">

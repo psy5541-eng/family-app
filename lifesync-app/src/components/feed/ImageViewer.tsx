@@ -11,6 +11,7 @@ type ImageViewerProps = {
 export default function ImageViewer({ src, onClose }: ImageViewerProps) {
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [imageLoaded, setImageLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 핀치 상태
@@ -180,17 +181,25 @@ export default function ImageViewer({ src, onClose }: ImageViewerProps) {
         </div>
       )}
 
+      {/* 이미지 로딩 */}
+      {!imageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-10 h-10 border-4 border-gray-600 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
+
       {/* 이미지 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt="확대 이미지"
-        className="max-w-full max-h-full object-contain select-none"
+        className={`max-w-full max-h-full object-contain select-none transition-opacity duration-200 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
         style={{
           transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
           transition: pinchRef.current.active || dragRef.current.active ? "none" : "transform 0.2s ease-out",
         }}
         draggable={false}
+        onLoad={() => setImageLoaded(true)}
         onClick={(e) => e.stopPropagation()}
       />
     </div>

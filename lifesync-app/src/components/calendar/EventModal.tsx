@@ -345,7 +345,15 @@ export default function EventModal({ date, event, onSave, onDelete, onClose, onP
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-        <div className="bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+          {/* 저장 로딩 오버레이 */}
+          {isSaving && (
+            <div className="absolute inset-0 z-20 bg-white/70 dark:bg-gray-800/70 flex flex-col items-center justify-center gap-3 rounded-t-2xl sm:rounded-2xl">
+              <div className="w-10 h-10 border-4 border-gray-200 border-t-primary-500 rounded-full animate-spin" />
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">저장 중...</p>
+            </div>
+          )}
+
           {/* 헤더 */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
             <button onClick={onClose} className="text-sm text-gray-600 dark:text-gray-400">
