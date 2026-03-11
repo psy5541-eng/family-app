@@ -88,6 +88,16 @@ export default function DashboardPage() {
         <WeatherWidget />
       </a>
 
+      {/* D2: 뉴스 위젯 */}
+      <a
+        href="https://news.naver.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block"
+      >
+        <NewsWidget />
+      </a>
+
       {/* 증시 + D-day */}
       <div className="grid grid-cols-1 fold-open:grid-cols-2 gap-4">
         <a
@@ -100,16 +110,6 @@ export default function DashboardPage() {
         </a>
         <DdayWidget />
       </div>
-
-      {/* D2: 뉴스 위젯 */}
-      <a
-        href="https://news.naver.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block"
-      >
-        <NewsWidget />
-      </a>
     </div>
   );
 }

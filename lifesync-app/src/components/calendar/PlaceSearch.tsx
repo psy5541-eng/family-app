@@ -42,7 +42,7 @@ export default function PlaceSearch({ onSelect, onClose }: PlaceSearchProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-white dark:bg-gray-800 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[70vh] flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">

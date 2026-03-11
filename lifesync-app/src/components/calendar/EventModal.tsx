@@ -108,7 +108,7 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
         <div className="bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
           {/* 헤더 */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
@@ -135,7 +135,6 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="제목"
-              autoFocus
               className="w-full text-lg font-medium text-gray-900 dark:text-white bg-transparent border-b border-gray-200 dark:border-gray-600 pb-2 outline-none placeholder-gray-300"
             />
 
@@ -257,46 +256,67 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
 
             {/* C6: 장소 지도 카드 (장소 + 좌표가 있을 때) */}
             {placeName && latitude && longitude && (
-              <a
-                href={`nmap://place?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(placeName)}&appname=com.lifesync.app`}
-                onClick={() => {
-                  setTimeout(() => {
-                    window.location.href = `https://map.naver.com/v5/search/${encodeURIComponent(placeName)}?c=${longitude},${latitude},15,0,0,0,dh`;
-                  }, 500);
-                }}
-                className="block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600"
-              >
-                {/* 지도 미리보기 영역 */}
-                <div className="relative w-full h-28 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                  {/* 격자 패턴 (지도 느낌) */}
-                  <div className="absolute inset-0 opacity-10">
-                    <div className="w-full h-full" style={{ backgroundImage: "linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-                  </div>
-                  {/* 마커 */}
-                  <div className="relative flex flex-col items-center">
-                    <div className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-md mb-1 max-w-[180px] truncate">
-                      {placeName}
-                    </div>
-                    <svg className="w-8 h-8 text-red-500 drop-shadow-md" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                    </svg>
-                  </div>
-                  {/* 네이버 지도 로고 */}
-                  <div className="absolute bottom-1 right-2 text-[9px] text-gray-400 font-medium">NAVER Map</div>
+              <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
+                {/* NCP Static Map 미리보기 */}
+                <div className="relative w-full h-32 bg-gray-100 dark:bg-gray-700">
+                  <img
+                    src={`/api/naver/static-map?lat=${latitude}&lng=${longitude}&w=400&h=200`}
+                    alt={`${placeName} 지도`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.style.display = "none";
+                      target.parentElement!.classList.add("flex", "items-center", "justify-center");
+                      const fallback = document.createElement("span");
+                      fallback.className = "text-xs text-gray-400";
+                      fallback.textContent = "지도를 불러올 수 없습니다";
+                      target.parentElement!.appendChild(fallback);
+                    }}
+                  />
                 </div>
+                {/* 하단 바: 네이버 지도 + T맵 */}
                 <div className="px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{placeName}</p>
                     <p className="text-[10px] text-gray-400 truncate">{placeAddress}</p>
                   </div>
-                  <div className="flex items-center gap-1 text-primary-500 flex-shrink-0 ml-2">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                    </svg>
-                    <span className="text-[10px] font-medium">지도 열기</span>
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                    {/* 네이버 지도 열기 */}
+                    <a
+                      href={`nmap://place?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(placeName)}&appname=com.lifesync.app`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTimeout(() => {
+                          window.location.href = `https://map.naver.com/v5/search/${encodeURIComponent(placeName)}?c=${longitude},${latitude},15,0,0,0,dh`;
+                        }, 500);
+                      }}
+                      className="flex items-center gap-1 text-green-600"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                      </svg>
+                      <span className="text-[10px] font-medium">지도</span>
+                    </a>
+                    {/* T맵 길안내 */}
+                    <a
+                      href={`tmap://route?goalx=${longitude}&goaly=${latitude}&goalname=${encodeURIComponent(placeName)}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTimeout(() => {
+                          window.location.href = `https://tmap.life/navigate?goalx=${longitude}&goaly=${latitude}&goalname=${encodeURIComponent(placeName)}`;
+                        }, 500);
+                      }}
+                      className="flex items-center gap-1 text-blue-500"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                      </svg>
+                      <span className="text-[10px] font-medium">T맵</span>
+                    </a>
                   </div>
                 </div>
-              </a>
+              </div>
             )}
 
             {/* 설명 */}

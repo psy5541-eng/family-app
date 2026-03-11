@@ -6,6 +6,7 @@ import EventListView from "@/components/calendar/EventListView";
 import EventModal from "@/components/calendar/EventModal";
 import { useCalendar } from "@/hooks/useCalendar";
 import { useAuth } from "@/hooks/useAuth";
+import { useEventNotifications } from "@/hooks/useEventNotifications";
 import type { CalendarEvent } from "@/types/db";
 import { calcDday, formatEventDate } from "@/lib/utils/date";
 
@@ -37,6 +38,8 @@ export default function CalendarPage() {
     deleteEvent,
     getEventsForDate,
   } = useCalendar();
+
+  useEventNotifications(events);
 
   const [viewMode, setViewMode] = useState<ViewMode>("calendar");
   const [showModal, setShowModal] = useState(false);
