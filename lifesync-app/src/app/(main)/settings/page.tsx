@@ -13,6 +13,10 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [nickname, setNickname] = useState(user?.nickname ?? "");
   const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [autoLogin, setAutoLogin] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !localStorage.getItem("lifesync_no_auto_login");
+  });
   const [profilePreview, setProfilePreview] = useState<string | null>(user?.profileImage ?? null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -189,6 +193,31 @@ export default function SettingsPage() {
       {/* 앱 설정 */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 px-4 pt-4 pb-2">앱 설정</h3>
+
+        {/* 자동 로그인 */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50 dark:border-gray-700/50">
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">자동 로그인</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              {autoLogin ? "앱 재시작 시 자동 로그인됩니다" : "앱 재시작 시 로그인이 필요합니다"}
+            </p>
+          </div>
+          <div
+            onClick={() => {
+              const next = !autoLogin;
+              setAutoLogin(next);
+              if (next) {
+                localStorage.removeItem("lifesync_no_auto_login");
+              } else {
+                localStorage.setItem("lifesync_no_auto_login", "true");
+              }
+            }}
+            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${autoLogin ? "bg-primary-500" : "bg-gray-200 dark:bg-gray-600"}`}
+          >
+            <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow-sm ${autoLogin ? "translate-x-5.5" : "translate-x-0.5"}`} style={{ transform: `translateX(${autoLogin ? "22px" : "2px"})` }} />
+          </div>
+        </div>
+
         <div className="px-4 py-3">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">화면 테마</p>
           <div className="flex gap-2">
