@@ -270,7 +270,7 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
                 {/* 네이버 Static Map API */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`https://naveropenapi.apigw.ntruss.com/map-static/v2/raster?w=400&h=200&center=${longitude},${latitude}&level=15&markers=type:d|size:mid|pos:${longitude} ${latitude}&X-NCP-APIGW-API-KEY-ID=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? ""}`}
+                  src={`/api/naver/static-map?lat=${latitude}&lng=${longitude}&w=400&h=200`}
                   alt={placeName}
                   className="w-full h-32 object-cover bg-gray-100 dark:bg-gray-700"
                 />
