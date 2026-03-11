@@ -14,18 +14,27 @@ type MediaUploaderProps = {
   onChange: (files: File[]) => void;
 };
 
+const MAX_VIDEO_SIZE_MB = 100;
+
 export default function MediaUploader({ maxImages = 10, onChange }: MediaUploaderProps) {
   const [previews, setPreviews] = useState<UploadedPreview[]>([]);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [sizeError, setSizeError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFiles(fileList: FileList) {
+    setSizeError(null);
     const imageFiles = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
     const videoFiles = Array.from(fileList).filter((f) => f.type.startsWith("video/"));
 
     // 영상이 포함된 경우 크롭 없이 바로 추가
     if (videoFiles.length > 0) {
       const video = videoFiles[0];
+      const sizeMB = video.size / (1024 * 1024);
+      if (sizeMB > MAX_VIDEO_SIZE_MB) {
+        setSizeError(`동영상 크기가 ${sizeMB.toFixed(0)}MB입니다. ${MAX_VIDEO_SIZE_MB}MB 이하로 올려주세요.`);
+        return;
+      }
       const preview: UploadedPreview = {
         file: video,
         previewUrl: URL.createObjectURL(video),
@@ -121,6 +130,10 @@ export default function MediaUploader({ maxImages = 10, onChange }: MediaUploade
           </svg>
           사진/동영상 추가 ({previews.length}/{maxImages})
         </button>
+      )}
+
+      {sizeError && (
+        <p className="text-sm text-red-500 mt-2">{sizeError}</p>
       )}
 
       <input
