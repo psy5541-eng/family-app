@@ -255,31 +255,46 @@ export default function EventModal({ date, event, onSave, onDelete, onClose }: E
               </div>
             </div>
 
-            {/* C6: 네이버맵 미니 지도 (장소 + 좌표가 있을 때) */}
+            {/* C6: 장소 지도 카드 (장소 + 좌표가 있을 때) */}
             {placeName && latitude && longitude && (
               <a
                 href={`nmap://place?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(placeName)}&appname=com.lifesync.app`}
-                onClick={(e) => {
-                  // 네이버 지도 앱이 없으면 웹 지도로 이동
+                onClick={() => {
                   setTimeout(() => {
                     window.location.href = `https://map.naver.com/v5/search/${encodeURIComponent(placeName)}?c=${longitude},${latitude},15,0,0,0,dh`;
                   }, 500);
                 }}
                 className="block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600"
               >
-                {/* 네이버 Static Map API */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/api/naver/static-map?lat=${latitude}&lng=${longitude}&w=400&h=200`}
-                  alt={placeName}
-                  className="w-full h-32 object-cover bg-gray-100 dark:bg-gray-700"
-                />
+                {/* 지도 미리보기 영역 */}
+                <div className="relative w-full h-28 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  {/* 격자 패턴 (지도 느낌) */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="w-full h-full" style={{ backgroundImage: "linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+                  </div>
+                  {/* 마커 */}
+                  <div className="relative flex flex-col items-center">
+                    <div className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-md mb-1 max-w-[180px] truncate">
+                      {placeName}
+                    </div>
+                    <svg className="w-8 h-8 text-red-500 drop-shadow-md" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                    </svg>
+                  </div>
+                  {/* 네이버 지도 로고 */}
+                  <div className="absolute bottom-1 right-2 text-[9px] text-gray-400 font-medium">NAVER Map</div>
+                </div>
                 <div className="px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{placeName}</p>
                     <p className="text-[10px] text-gray-400 truncate">{placeAddress}</p>
                   </div>
-                  <span className="text-[10px] text-primary-500 font-medium flex-shrink-0 ml-2">지도 열기</span>
+                  <div className="flex items-center gap-1 text-primary-500 flex-shrink-0 ml-2">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                    </svg>
+                    <span className="text-[10px] font-medium">지도 열기</span>
+                  </div>
                 </div>
               </a>
             )}
