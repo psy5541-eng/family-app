@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFCM } from "@/hooks/useFCM";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useBackButton } from "@/hooks/useBackButton";
 import BottomNav from "@/components/layout/BottomNav";
 import Header from "@/components/layout/Header";
 
@@ -17,6 +18,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     window.location.reload();
   }, []);
   usePullToRefresh({ onRefresh: handleRefresh }); // Pull-to-Refresh
+  useBackButton(); // Android 뒤로가기 + 모달 닫기
 
   // 비로그인 시 로그인 페이지로 이동
   useEffect(() => {
