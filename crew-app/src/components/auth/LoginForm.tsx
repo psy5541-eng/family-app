@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/useAuth";
+import CharacterAvatar from "@/components/character/CharacterAvatar";
 
 const BiometricButton = dynamic(() => import("./BiometricButton"), {
   ssr: false,
@@ -82,16 +82,6 @@ export default function LoginForm() {
     router.replace("/dashboard");
   }
 
-  // 달리기 애니메이션: 6프레임 사이클
-  const [runFrame, setRunFrame] = useState(1);
-
-  useEffect(() => {
-    if (showAutoLoginPrompt) return; // 프롬프트 표시 중에는 애니메이션 불필요
-    const interval = setInterval(() => {
-      setRunFrame((f) => (f % 6) + 1);
-    }, 120);
-    return () => clearInterval(interval);
-  }, [showAutoLoginPrompt]);
 
   function handleSocialLogin(provider: "google" | "naver") {
     setIsLoading(true);
@@ -171,30 +161,8 @@ export default function LoginForm() {
 
           {/* 달리는 도트 캐릭터 2명 */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-0 items-end">
-            {/* 남자 캐릭터 */}
-            <div className="w-[156px] h-[156px] relative" style={{ imageRendering: "pixelated" }}>
-              <Image
-                src={`/assets/character/run/run-male-${runFrame}.png`}
-                alt="남자 캐릭터"
-                width={128}
-                height={128}
-                className="w-full h-full object-contain"
-                priority
-                unoptimized
-              />
-            </div>
-            {/* 여자 캐릭터 */}
-            <div className="w-[156px] h-[156px] relative" style={{ imageRendering: "pixelated" }}>
-              <Image
-                src={`/assets/character/run/run-female-${runFrame}.png`}
-                alt="여자 캐릭터"
-                width={128}
-                height={128}
-                className="w-full h-full object-contain"
-                priority
-                unoptimized
-              />
-            </div>
+            <CharacterAvatar gender="male" mode="run" fps={8} size={156} />
+            <CharacterAvatar gender="female" mode="run" fps={8} size={156} />
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import CharacterAvatar from "@/components/character/CharacterAvatar";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function CharacterSelectPage() {
@@ -86,19 +86,16 @@ export default function CharacterSelectPage() {
               onClick={() => handleSelect(gender)}
               className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-400 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50"
             >
-              <div
-                className="w-28 h-28 relative"
-                style={{ imageRendering: "pixelated" }}
-              >
-                <Image
-                  src={`/assets/character/base/${gender}-stand.png`}
-                  alt={gender === "male" ? "남자" : "여자"}
-                  width={128}
-                  height={128}
-                  className="w-full h-full object-contain"
-                  unoptimized
-                />
-              </div>
+              <CharacterAvatar
+                gender={gender}
+                mode="idle"
+                size={112}
+                equipment={gender === "female" ? {
+                  top: "idle-top-female",
+                  bottom: "idle-bottom-female",
+                  shoes: "idle-shoes-female",
+                } : undefined}
+              />
               <span className="text-base font-bold text-gray-700 dark:text-gray-300">
                 {gender === "male" ? "남자" : "여자"}
               </span>
