@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
         calories: activity.calories,
         elevation: activity.elevation,
         elevationLoss: activity.elevationLoss,
+        laps: activity.laps ? JSON.stringify(activity.laps) : null,
         pointsEarned: points,
         createdAt: now,
       });

@@ -55,6 +55,7 @@ export const activities = sqliteTable("activities", {
   calories: integer("calories"),
   elevation: real("elevation"), // 누적 상승 고도 (m)
   elevationLoss: real("elevation_loss"), // 하강 고도 (m)
+  laps: text("laps"), // JSON: [{lapNum, distance, duration, pace}]
   pointsEarned: integer("points_earned").default(0),
   visibility: text("visibility", { enum: ["public", "private"] }).default("public").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),

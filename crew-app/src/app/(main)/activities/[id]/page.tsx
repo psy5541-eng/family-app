@@ -96,6 +96,12 @@ export default function ActivityDetailPage() {
   const isOwner = activity.userId === user?.id;
   const startDate = new Date(activity.startTime);
 
+  // 랩 데이터 파싱
+  type Lap = { lapNum: number; distance: number; duration: number; pace: number };
+  const laps: Lap[] = activity.laps ? JSON.parse(activity.laps as string) : [];
+  const fastestPace = laps.length > 0 ? Math.min(...laps.map((l) => l.pace)) : 0;
+  const slowestPace = laps.length > 0 ? Math.max(...laps.map((l) => l.pace)) : 0;
+
   return (
     <div className="max-w-lg mx-auto px-4 py-4 pb-24">
       {/* 헤더 */}
@@ -191,6 +197,61 @@ export default function ActivityDetailPage() {
           )}
         </div>
       </div>
+
+      {/* 랩 페이스 바 차트 */}
+      {laps.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 mt-3">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">랩 페이스</h3>
+          <div className="space-y-1.5">
+            {laps.map((lap) => {
+              const isFastest = lap.pace === fastestPace;
+              // 바 너비: 가장 느린 페이스 = 100%, 가장 빠른 = 최소 30%
+              const range = slowestPace - fastestPace;
+              const barWidth = range > 0
+                ? 100 - ((lap.pace - fastestPace) / range) * 70
+                : 100;
+              const paceMin = Math.floor(lap.pace / 60);
+              const paceSec = Math.round(lap.pace % 60);
+
+              return (
+                <div key={lap.lapNum} className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-900 dark:text-gray-200 w-6 text-right shrink-0">
+                    {lap.lapNum}
+                  </span>
+                  <div className="flex-1 h-6 bg-gray-50 dark:bg-gray-700/50 rounded overflow-hidden relative">
+                    <div
+                      className={`h-full rounded transition-all ${
+                        isFastest
+                          ? "bg-red-500"
+                          : "bg-blue-600 dark:bg-blue-500"
+                      }`}
+                      style={{ width: `${barWidth}%` }}
+                    />
+                    <span className={`absolute inset-0 flex items-center px-2 text-[11px] font-bold ${
+                      isFastest ? "text-white" : "text-white dark:text-white"
+                    }`}>
+                      {paceMin}&apos;{paceSec.toString().padStart(2, "0")}&quot;
+                      <span className="ml-auto text-[10px] text-gray-400 font-normal">
+                        {lap.distance.toFixed(2)}km
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 bg-red-500 rounded-sm" />
+              최고 랩
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 bg-blue-600 rounded-sm" />
+              일반 랩
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 삭제 버튼 */}
       {isOwner && (

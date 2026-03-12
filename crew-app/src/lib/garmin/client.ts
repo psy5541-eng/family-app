@@ -9,7 +9,7 @@ export type GarminActivity = {
   startTimeGMT: string; // 기기 원본 시간 (UTC)
   beginTimestamp: number; // epoch ms (기기 기록 시점)
   duration: number; // 초
-  distance: number; // 미터
+  distance: number; // 미터 (편집 가능한 값)
   averageSpeed: number; // m/s
   averageHR?: number;
   calories?: number;
@@ -38,6 +38,13 @@ function mapActivityType(typeKey: string): "running" | "trail_running" | "walkin
 }
 
 // 가민 로그인 후 활동 데이터 가져오기
+export type LapData = {
+  lapNum: number;
+  distance: number; // km
+  duration: number; // 초
+  pace: number; // 초/km
+};
+
 export async function fetchGarminActivities(
   garminEmail: string,
   encryptedPassword: string,
@@ -55,6 +62,7 @@ export async function fetchGarminActivities(
     calories: number | null;
     elevation: number | null;
     elevationLoss: number | null;
+    laps: LapData[] | null;
   }>;
 }> {
   const password = decryptPassword(encryptedPassword);
@@ -71,7 +79,7 @@ export async function fetchGarminActivities(
   const fetchCount = isFirstSync ? 1 : 50;
   const rawActivities = (await GC.getActivities(0, fetchCount)) as GarminActivity[];
 
-  const activities = rawActivities
+  const mappedActivities = rawActivities
     .filter((a) => {
       // 수동 입력 활동 제외 (기기에서 기록된 것만)
       if (a.manualActivity) return false;
@@ -110,27 +118,71 @@ export async function fetchGarminActivities(
     .map((a) => {
       const type = mapActivityType(a.activityType?.typeKey ?? "");
       if (!type) return null;
-
-      const distanceKm = (a.distance ?? 0) / 1000;
-      const durationSec = Math.round(a.duration ?? 0);
-      const pace = distanceKm > 0 ? Math.round(durationSec / distanceKm) : null;
-
-      return {
-        garminActivityId: String(a.activityId),
-        activityType: type,
-        title: a.activityName ?? `${type} activity`,
-        // beginTimestamp(기기 원본 시간) 사용 — 편집된 시간 무시
-        startTime: a.beginTimestamp ? new Date(a.beginTimestamp) : new Date(a.startTimeGMT || a.startTimeLocal),
-        duration: durationSec,
-        distance: Math.round(distanceKm * 100) / 100,
-        pace,
-        heartRate: a.averageHR ? Math.round(a.averageHR) : null,
-        calories: a.calories ? Math.round(a.calories) : null,
-        elevation: a.elevationGain ? Math.round(a.elevationGain * 10) / 10 : null,
-        elevationLoss: a.elevationLoss ? Math.round(a.elevationLoss * 10) / 10 : null,
-      };
+      return { ...a, mappedType: type };
     })
     .filter((a): a is NonNullable<typeof a> => a !== null);
+
+  // 각 활동의 상세 데이터에서 원본 거리 + km별 랩 데이터 가져오기
+  const activities = [];
+  for (const a of mappedActivities) {
+    const durationSec = Math.round(a.duration ?? 0);
+    let distanceMeters = a.distance ?? 0;
+    let laps: LapData[] | null = null;
+
+    try {
+      // 1) getActivity: splitSummaries에서 INTERVAL_ACTIVE 원본 거리
+      const detail = await GC.getActivity({ activityId: String(a.activityId) }) as Record<string, unknown>;
+      const splitSummaries = detail?.splitSummaries as Array<{ distance?: number; duration?: number; splitType?: string }> | undefined;
+
+      if (splitSummaries && splitSummaries.length > 0) {
+        const activeSplit = splitSummaries.find((s) => s.splitType === "INTERVAL_ACTIVE");
+        if (activeSplit?.distance && activeSplit.distance > 0) {
+          distanceMeters = activeSplit.distance;
+        }
+      }
+
+      // 2) splits API: km별 랩 데이터 (편집 불가)
+      try {
+        const splitsUrl = `https://connectapi.garmin.com/activity-service/activity/${a.activityId}/splits`;
+        const splitsData = await GC.get(splitsUrl) as Record<string, unknown>;
+        const lapDTOs = splitsData?.lapDTOs as Array<{
+          distance?: number; duration?: number; startTimeGMT?: string;
+          averageSpeed?: number; maxSpeed?: number;
+        }> | undefined;
+
+        if (lapDTOs && lapDTOs.length > 0) {
+          laps = lapDTOs.map((lap, i) => {
+            const lapDistKm = (lap.distance ?? 0) / 1000;
+            const lapDur = Math.round(lap.duration ?? 0);
+            const lapPace = lapDistKm > 0 ? Math.round(lapDur / lapDistKm) : 0;
+            return { lapNum: i + 1, distance: Math.round(lapDistKm * 100) / 100, duration: lapDur, pace: lapPace };
+          });
+        }
+      } catch {
+        // splits API 실패 시 무시 (랩 데이터 없음)
+      }
+    } catch (err) {
+      console.warn(`Failed to get detail for activity ${a.activityId}:`, err);
+    }
+
+    const distanceKm = distanceMeters / 1000;
+    const pace = distanceKm > 0 ? Math.round(durationSec / distanceKm) : null;
+
+    activities.push({
+      garminActivityId: String(a.activityId),
+      activityType: a.mappedType,
+      title: a.activityName ?? `${a.mappedType} activity`,
+      startTime: a.beginTimestamp ? new Date(a.beginTimestamp) : new Date(a.startTimeGMT || a.startTimeLocal),
+      duration: durationSec,
+      distance: Math.round(distanceKm * 100) / 100,
+      pace,
+      heartRate: a.averageHR ? Math.round(a.averageHR) : null,
+      calories: a.calories ? Math.round(a.calories) : null,
+      elevation: a.elevationGain ? Math.round(a.elevationGain * 10) / 10 : null,
+      elevationLoss: a.elevationLoss ? Math.round(a.elevationLoss * 10) / 10 : null,
+      laps,
+    });
+  }
 
   return { activities };
 }
