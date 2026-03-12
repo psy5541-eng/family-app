@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import type { Activity } from "@/types/db";
+import LoadingOverlay from "@/components/common/LoadingOverlay";
 
 const ACTIVITY_TYPE_LABEL: Record<string, string> = {
   running: "러닝",
@@ -104,6 +105,7 @@ export default function ActivityDetailPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4 pb-24">
+      <LoadingOverlay visible={isDeleting} message="삭제 중..." />
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-4">
         <button

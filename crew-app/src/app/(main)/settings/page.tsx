@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
+import LoadingOverlay from "@/components/common/LoadingOverlay";
 
 // ── 가민 연동 섹션 ──────────────────────────────────────────
 function GarminSection({
@@ -114,6 +115,9 @@ function GarminSection({
   if (isLoading) return null;
 
   return (
+    <>
+    <LoadingOverlay visible={isSyncing} message="운동 기록 동기화 중..." />
+    <LoadingOverlay visible={isSaving} message="처리 중..." />
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
       <div className="flex items-center gap-2 px-4 pt-4 pb-2">
         <svg className="w-5 h-5" viewBox="0 0 48 48" fill="none">
@@ -229,6 +233,7 @@ function GarminSection({
         </div>
       )}
     </div>
+    </>
   );
 }
 
