@@ -254,7 +254,7 @@ export default function EventModal({ date, event, onSave, onDelete, onClose, onP
                           type="button"
                           onClick={() => {
                             const webUrl = `https://map.naver.com/v5/search/${encodeURIComponent(ev.placeName!)}?c=${ev.longitude},${ev.latitude},15,0,0,0,dh`;
-                            const intentUri = `intent://place?lat=${ev.latitude}&lng=${ev.longitude}&name=${encodeURIComponent(ev.placeName!)}&appname=com.lifesync.app#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
+                            const intentUri = `intent://search?query=${encodeURIComponent(ev.placeName!)}&appname=com.lifesync.app#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
                             window.location.href = intentUri;
                           }}
                           className="flex items-center gap-1 text-green-600"
@@ -264,8 +264,8 @@ export default function EventModal({ date, event, onSave, onDelete, onClose, onP
                         <button
                           type="button"
                           onClick={() => {
-                            const playStoreUrl = `https://play.google.com/store/apps/details?id=com.skt.tmap.ku`;
-                            const intentUri = `intent://route?goalx=${ev.longitude}&goaly=${ev.latitude}&goalname=${encodeURIComponent(ev.placeName!)}#Intent;scheme=tmap;package=com.skt.tmap.ku;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`;
+                            const tmapWebUrl = `https://tmap.life/navigate?goalx=${ev.longitude}&goaly=${ev.latitude}&goalname=${encodeURIComponent(ev.placeName!)}`;
+                            const intentUri = `intent://route?goalx=${ev.longitude}&goaly=${ev.latitude}&goalname=${encodeURIComponent(ev.placeName!)}&appname=com.lifesync.app#Intent;scheme=tmap;package=com.skt.tmap.ku;S.browser_fallback_url=${encodeURIComponent(tmapWebUrl)};end`;
                             window.location.href = intentUri;
                           }}
                           className="flex items-center gap-1 text-blue-500"
@@ -523,7 +523,7 @@ export default function EventModal({ date, event, onSave, onDelete, onClose, onP
                       onClick={(e) => {
                         e.stopPropagation();
                         const webUrl = `https://map.naver.com/v5/search/${encodeURIComponent(placeName)}?c=${longitude},${latitude},15,0,0,0,dh`;
-                        const intentUri = `intent://place?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(placeName)}&appname=com.lifesync.app#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
+                        const intentUri = `intent://search?query=${encodeURIComponent(placeName)}&appname=com.lifesync.app#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
                         window.location.href = intentUri;
                       }}
                       className="flex items-center gap-1 text-green-600"
@@ -539,8 +539,8 @@ export default function EventModal({ date, event, onSave, onDelete, onClose, onP
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const playStoreUrl = `https://play.google.com/store/apps/details?id=com.skt.tmap.ku`;
-                        const intentUri = `intent://route?goalx=${longitude}&goaly=${latitude}&goalname=${encodeURIComponent(placeName)}#Intent;scheme=tmap;package=com.skt.tmap.ku;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`;
+                        const tmapWebUrl = `https://tmap.life/navigate?goalx=${longitude}&goaly=${latitude}&goalname=${encodeURIComponent(placeName)}`;
+                        const intentUri = `intent://route?goalx=${longitude}&goaly=${latitude}&goalname=${encodeURIComponent(placeName)}&appname=com.lifesync.app#Intent;scheme=tmap;package=com.skt.tmap.ku;S.browser_fallback_url=${encodeURIComponent(tmapWebUrl)};end`;
                         window.location.href = intentUri;
                       }}
                       className="flex items-center gap-1 text-blue-500"

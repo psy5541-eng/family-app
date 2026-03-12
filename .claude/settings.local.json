@@ -10,7 +10,6 @@
       "Bash(npm install next@latest)",
       "Bash(npm install next@15.5.2 eslint-config-next@15.5.2)",
       "Bash(npm show next versions --json)",
-      "Bash(node -e \"const v=require\\(''fs''\\).readFileSync\\(''/dev/stdin'',''utf8''\\); const versions=JSON.parse\\(v\\).filter\\(x=>x.startsWith\\(''15.''\\)\\); console.log\\(versions.slice\\(-10\\).join\\(''\\\\n''\\)\\)\")",
       "Bash(ls -la /d/vscode/family-app/PRD*)",
       "Bash(npm install firebase --save)",
       "Bash(npm install firebase)",
@@ -19,13 +18,12 @@
       "Bash(ipconfig)",
       "Bash(CAP_DEV=true npx cap sync android)",
       "Bash(npx cap open android)",
-      "Bash(grep -l \"getLocalDb\" d:/vscode/family-app/lifesync-app/src/app/api/**/*.ts d:/vscode/family-app/lifesync-app/src/app/api/**/**/*.ts)",
       "Bash(git -C d:/openclaw/cursor/family-app log --oneline -10)",
       "Bash(git -C d:/openclaw/cursor/family-app log --oneline -20)",
       "Bash(npx next:*)",
       "Bash(npm run:*)",
-      "Bash(grep -r \"STOCK_API_KEY\\\\|NAVER_MAP\\\\|EMAIL\" /d/openclaw/cursor/family-app/lifesync-app --include=*.env*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(node -e \":*)"
     ]
   }
 }
