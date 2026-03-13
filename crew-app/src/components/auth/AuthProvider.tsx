@@ -13,7 +13,7 @@ type AuthUser = {
   biometricEnabled: boolean | null;
 };
 
-type LoginResult = { success: true; user: AuthUser } | { success: false; error: string };
+type LoginResult = { success: true; user: AuthUser; token: string } | { success: false; error: string };
 type RegisterResult = LoginResult;
 
 export type AuthContextType = {
@@ -97,7 +97,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         localStorage.setItem(TOKEN_KEY, newToken);
         setToken(newToken);
         setUser(newUser);
-        return { success: true, user: newUser };
+        return { success: true, user: newUser, token: newToken };
       } catch {
         return { success: false, error: "네트워크 오류가 발생했습니다." };
       }
@@ -123,7 +123,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         localStorage.setItem(TOKEN_KEY, newToken);
         setToken(newToken);
         setUser(newUser);
-        return { success: true, user: newUser };
+        return { success: true, user: newUser, token: newToken };
       } catch {
         return { success: false, error: "네트워크 오류가 발생했습니다." };
       }

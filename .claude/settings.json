@@ -7,10 +7,30 @@
       "Bash(npm install sharp @aws-sdk/client-s3)",
       "Bash(ls d:/openclaw/cursor/family-app/lifesync-app/src/app/api/feed/[id]/comments/)",
       "Bash(npx wrangler:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(node -e \":*)",
+      "Bash(ls d:/vscode/family-app/asset_image/run_top* d:/vscode/family-app/asset_image/run_bottom* d:/vscode/family-app/asset_image/run_shose*)",
+      "Bash(grep -r \"characterBase\\\\|characterId\\\\|character\" /d/vscode/family-app/crew-app/src/app --include=*.tsx --include=*.ts)",
+      "Bash(ls -la /d/vscode/family-app/crew-app/src/app/\\\\\\(main\\\\\\)/)",
+      "Bash(ls d:/vscode/family-app/asset_image/run_default_*)",
+      "Bash(node scripts/process-layers.mjs)",
+      "Bash(node ../scripts/process-layers.mjs)",
+      "Bash(node -e \"const sharp = require\\(''''sharp''''\\); console.log\\(''''sharp OK'''', sharp.versions\\)\")",
+      "Bash(node ../scripts/process-layers.cjs)",
+      "Bash(node -e \"console.log\\(require.resolve\\(''sharp''\\)\\)\")",
+      "Bash(node scripts/process-layers.cjs)",
+      "Bash(ls d:/vscode/family-app/asset_image/run*)",
+      "Read(//d/vscode/family-app/crew-app/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3100/login)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/login)",
+      "Bash(node scripts/remove-checker.cjs asset_image/run-spritesheet2.png --cols 4 --rows 2 --pick-row 1 --pick-frames 1,4 --merge --prefix test --out /tmp/checker-test)",
+      "Bash(ls \"d:/vscode/family-app/asset_image/idle_f\\(원본\\).png\")",
+      "Bash(node -e \"const sharp=require\\(''./crew-app/node_modules/sharp''\\); sharp\\(''asset_image/idle_f\\(원본\\).png''\\).metadata\\(\\).then\\(m=>console.log\\(m.width+''x''+m.height\\)\\)\")",
+      "Bash(node scripts/remove-checker.cjs \"asset_image/idle_f\\(원본\\).png\" --cols 4 --rows 4 --pick-row 2 --pick-frames 1,4 --merge --prefix idle_f --out asset_image)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\park\\.claude\\projects\\d--openclaw-cursor-family-app"
+      "C:\\Users\\park\\.claude\\projects\\d--openclaw-cursor-family-app",
+      "d:\\vscode\\family-app\\crew-app\\public\\assets\\character\\top"
     ]
   }
 }

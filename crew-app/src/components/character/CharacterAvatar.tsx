@@ -1,30 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-
 type EquipmentLayers = {
-  top?: string | null;    // 아이템 ID or 파일명 접두사 (예: "idle-top-female")
+  top?: string | null;
   bottom?: string | null;
   shoes?: string | null;
+  hair?: string | null;
   hat?: string | null;
 };
 
 type CharacterAvatarProps = {
   gender: "male" | "female";
   mode?: "idle" | "run";
-  frame?: number; // 외부 제어 시 사용 (1~4)
-  animate?: boolean; // true면 자동 프레임 순환
-  fps?: number; // 애니메이션 속도 (기본: idle 4, run 8)
-  size?: number; // px
+  animate?: boolean;
+  fps?: number;
+  size?: number;
   className?: string;
-  equipment?: EquipmentLayers; // 장착 아이템 레이어
+  equipment?: EquipmentLayers;
 };
 
 export default function CharacterAvatar({
   gender,
   mode = "idle",
-  frame,
   animate = true,
   fps,
   size = 128,
@@ -33,59 +29,55 @@ export default function CharacterAvatar({
 }: CharacterAvatarProps) {
   const defaultFps = 8;
   const actualFps = fps ?? defaultFps;
+  const action = mode === "idle" ? "idle" : "run";
+  const duration = 4 / actualFps;
 
-  const [internalFrame, setInternalFrame] = useState(1);
-
-  useEffect(() => {
-    if (!animate || frame !== undefined) return;
-    const interval = setInterval(() => {
-      setInternalFrame((f) => (f % 4) + 1);
-    }, 1000 / actualFps);
-    return () => clearInterval(interval);
-  }, [animate, frame, actualFps]);
-
-  const currentFrame = frame ?? internalFrame;
-  const prefix = mode === "idle" ? "idle" : "run";
-  const folder = mode === "idle" ? "base" : "run";
-
-  // 페이퍼돌 레이어 순서: base → shoes → bottom → top → hat
-  const layers: { folder: string; prefix: string }[] = [
-    { folder, prefix: `${prefix}-${gender}` }, // base 맨몸
+  // 페이퍼돌 레이어 순서: base → shoes → bottom → top → hair → hat
+  const sheets: string[] = [
+    `/assets/character/base/${action}-${gender}.png`,
   ];
 
   if (equipment?.shoes) {
-    layers.push({ folder: "shoes", prefix: equipment.shoes });
+    sheets.push(`/assets/character/shoes/${equipment.shoes}-${action}-${gender}.png`);
   }
   if (equipment?.bottom) {
-    layers.push({ folder: "bottom", prefix: equipment.bottom });
+    sheets.push(`/assets/character/bottom/${equipment.bottom}-${action}-${gender}.png`);
   }
   if (equipment?.top) {
-    layers.push({ folder: "top", prefix: equipment.top });
+    sheets.push(`/assets/character/top/${equipment.top}-${action}-${gender}.png`);
+  }
+  if (equipment?.hair) {
+    sheets.push(`/assets/character/hair/${equipment.hair}-${action}-${gender}.png`);
   }
   if (equipment?.hat) {
-    layers.push({ folder: "hat", prefix: equipment.hat });
+    sheets.push(`/assets/character/hat/${equipment.hat}-${action}-${gender}.png`);
   }
 
+  // 스프라이트 시트: 256x64 원본 → size*4 x size 로 렌더
+  // background-position: -256px 0 → 4프레임 전체 이동
+  // steps(4)로 프레임 단위 점프
   return (
     <div
       className={`relative ${className}`}
-      style={{ width: size, height: size, imageRendering: "pixelated" }}
+      style={{ width: size, height: size }}
     >
-      {layers.map((layer, li) =>
-        [1, 2, 3, 4].map((f) => (
-          <Image
-            key={`${li}-${f}`}
-            src={`/assets/character/${layer.folder}/${layer.prefix}-${f}.png`}
-            alt=""
-            width={size * 2}
-            height={size * 2}
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{ display: currentFrame === f ? "block" : "none" }}
-            priority
-            unoptimized
-          />
-        ))
-      )}
+      {sheets.map((src, i) => (
+        <div
+          key={i}
+          className="absolute inset-0"
+          style={{
+            "--frame-size": `${size}px`,
+            backgroundImage: `url(${src})`,
+            backgroundSize: `${size * 4}px ${size}px`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "0 0",
+            imageRendering: "pixelated",
+            animation: animate
+              ? `sprite-run ${duration}s steps(4) infinite`
+              : undefined,
+          } as React.CSSProperties}
+        />
+      ))}
     </div>
   );
 }

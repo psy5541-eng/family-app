@@ -90,11 +90,6 @@ export default function CharacterSelectPage() {
                 gender={gender}
                 mode="idle"
                 size={112}
-                equipment={gender === "female" ? {
-                  top: "idle-top-female",
-                  bottom: "idle-bottom-female",
-                  shoes: "idle-shoes-female",
-                } : undefined}
               />
               <span className="text-base font-bold text-gray-700 dark:text-gray-300">
                 {gender === "male" ? "남자" : "여자"}

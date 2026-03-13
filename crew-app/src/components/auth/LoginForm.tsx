@@ -13,10 +13,21 @@ const BiometricButton = dynamic(() => import("./BiometricButton"), {
 
 const AUTO_LOGIN_PREF_KEY = "crew_auto_login_asked";
 
+async function getPostLoginRoute(token: string): Promise<string> {
+  const res = await fetch("/api/character", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json();
+  if (json.success && json.data.base === "unknown") {
+    return "/character-select";
+  }
+  return "/dashboard";
+}
+
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, setTokenAndUser } = useAuth();
+  const { login, setTokenAndUser, token: authToken } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,7 +55,7 @@ export default function LoginForm() {
             setShowAutoLoginPrompt(true);
             setIsLoading(false);
           } else {
-            router.replace("/dashboard");
+            getPostLoginRoute(callbackToken).then((r) => router.replace(r));
           }
         } else {
           setError("소셜 로그인에 실패했습니다.");
@@ -66,7 +77,7 @@ export default function LoginForm() {
         setShowAutoLoginPrompt(true);
         setIsLoading(false);
       } else {
-        router.replace("/dashboard");
+        getPostLoginRoute(result.token).then((r) => router.replace(r));
       }
     } else {
       setError(result.error);
@@ -79,7 +90,8 @@ export default function LoginForm() {
     if (!keepLoggedIn) localStorage.setItem("crew_no_auto_login", "true");
     else localStorage.removeItem("crew_no_auto_login");
     setShowAutoLoginPrompt(false);
-    router.replace("/dashboard");
+    if (!authToken) throw new Error("No auth token available");
+    getPostLoginRoute(authToken).then((r) => router.replace(r));
   }
 
 
@@ -138,13 +150,19 @@ export default function LoginForm() {
           <div className="absolute top-4 animate-[cloud_10s_linear_infinite] [animation-delay:-7s]">
             <div className="w-10 h-3 bg-white/50 rounded-full" />
           </div>
-          {/* 잔디 */}
-          <div className="absolute bottom-10 left-0 right-0 h-4 bg-green-500 dark:bg-green-600" />
+          {/* 잔디 - 오른쪽으로 흘러가는 애니메이션 */}
+          <div className="absolute bottom-10 left-0 right-0 h-4 overflow-hidden">
+            <div className="animate-[grassMove_2s_linear_infinite]" style={{ width: "200%", marginLeft: "-50%" }}>
+              <div className="h-4 bg-green-500 dark:bg-green-600" />
+            </div>
+          </div>
           {/* 잔디 디테일 */}
-          <div className="absolute bottom-[38px] left-0 right-0 h-2 flex items-end justify-around">
-            {[...Array(16)].map((_, i) => (
-              <div key={i} className="w-[3px] bg-green-600 dark:bg-green-700 rounded-t-full" style={{ height: `${4 + (i % 3) * 2}px` }} />
-            ))}
+          <div className="absolute bottom-[38px] left-0 right-0 h-2 overflow-hidden">
+            <div className="flex items-end justify-around animate-[grassMove_2s_linear_infinite]" style={{ width: "200%", marginLeft: "-50%" }}>
+              {[...Array(32)].map((_, i) => (
+                <div key={i} className="w-[3px] bg-green-600 dark:bg-green-700 rounded-t-full shrink-0" style={{ height: `${4 + (i % 3) * 2}px` }} />
+              ))}
+            </div>
           </div>
           {/* 트랙 */}
           <div className="absolute bottom-0 left-0 right-0 h-10 bg-[#D2691E]" />

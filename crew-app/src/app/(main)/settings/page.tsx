@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import LoadingOverlay from "@/components/common/LoadingOverlay";
+import CharacterAvatar from "@/components/character/CharacterAvatar";
 
 // ── 가민 연동 섹션 ──────────────────────────────────────────
 function GarminSection({
@@ -324,18 +324,9 @@ export default function SettingsPage() {
 
         <div className="flex items-center gap-4 mb-1">
           {/* 캐릭터 아바타 */}
-          <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+          <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center">
             {characterBase !== "unknown" ? (
-              <div className="w-full h-full flex items-center justify-center" style={{ imageRendering: "pixelated" }}>
-                <Image
-                  src={`/assets/character/base/${characterBase}-stand.png`}
-                  alt="내 캐릭터"
-                  width={128}
-                  height={128}
-                  className="w-14 h-14 object-contain"
-                  unoptimized
-                />
-              </div>
+              <CharacterAvatar gender={characterBase} mode="idle" size={56} equipment={{ top: "default", bottom: "default", shoes: "default" }} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xl font-semibold text-gray-500 dark:text-gray-300">
                 {user?.nickname?.charAt(0)?.toUpperCase() ?? "?"}
