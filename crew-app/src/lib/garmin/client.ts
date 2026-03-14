@@ -1,5 +1,6 @@
 import { GarminConnect } from "garmin-connect";
-import { decryptPassword } from "./crypto";
+import type { IOauth1Token, IOauth2Token } from "garmin-connect/dist/garmin/types";
+import { decryptPassword, decryptToken } from "./crypto";
 
 export type GarminActivity = {
   activityId: number;
@@ -45,11 +46,12 @@ export type LapData = {
   pace: number; // 초/km
 };
 
-export async function fetchGarminActivities(
-  garminEmail: string,
-  encryptedPassword: string,
-  sinceDate?: Date
-): Promise<{
+export type GarminTokens = {
+  oauth1: IOauth1Token;
+  oauth2: IOauth2Token;
+};
+
+export type FetchResult = {
   activities: Array<{
     garminActivityId: string;
     activityType: "running" | "trail_running" | "walking";
@@ -63,15 +65,55 @@ export async function fetchGarminActivities(
     elevation: number | null;
     elevationLoss: number | null;
     laps: LapData[] | null;
+    elevationData: Array<{ distance: number; elevation: number }> | null;
   }>;
-}> {
-  const password = decryptPassword(encryptedPassword);
-  const GC = new GarminConnect({
-    username: garminEmail,
-    password,
-  });
+  tokens: GarminTokens; // 저장용 토큰
+  loginUsed: boolean; // 로그인 발생 여부 (rate limit 추적용)
+};
 
+/**
+ * 가민 클라이언트 생성 — 토큰이 있으면 재사용, 없으면 로그인
+ * @throws 401/인증 에러 시 throw (재인증 필요)
+ */
+async function createGarminClient(
+  garminEmail: string,
+  encryptedPassword: string,
+  encryptedOauth1?: string | null,
+  encryptedOauth2?: string | null,
+): Promise<{ GC: GarminConnect; loginUsed: boolean }> {
+  const password = decryptPassword(encryptedPassword);
+  const GC = new GarminConnect({ username: garminEmail, password });
+
+  // 저장된 토큰이 있으면 재사용 시도
+  if (encryptedOauth1 && encryptedOauth2) {
+    try {
+      const oauth1 = decryptToken<IOauth1Token>(encryptedOauth1);
+      const oauth2 = decryptToken<IOauth2Token>(encryptedOauth2);
+      GC.loadToken(oauth1, oauth2);
+      // 토큰 유효성 검증 — 간단한 API 호출
+      await GC.getActivities(0, 1);
+      return { GC, loginUsed: false };
+    } catch {
+      // 토큰 만료/무효 → 로그인으로 fallback
+      console.warn("Cached token invalid, falling back to login");
+    }
+  }
+
+  // 토큰 없거나 무효 → 새 로그인
   await GC.login();
+  return { GC, loginUsed: true };
+}
+
+export async function fetchGarminActivities(
+  garminEmail: string,
+  encryptedPassword: string,
+  sinceDate?: Date,
+  encryptedOauth1?: string | null,
+  encryptedOauth2?: string | null,
+): Promise<FetchResult> {
+  const { GC, loginUsed } = await createGarminClient(
+    garminEmail, encryptedPassword, encryptedOauth1, encryptedOauth2
+  );
 
   // 첫 동기화: 최근 1개만 (테스트용, 연동 확인)
   // 이후 동기화: lastSyncAt 이후 활동 전부 가져옴
@@ -128,10 +170,11 @@ export async function fetchGarminActivities(
     const durationSec = Math.round(a.duration ?? 0);
     let distanceMeters = a.distance ?? 0;
     let laps: LapData[] | null = null;
+    let elevationData: Array<{ distance: number; elevation: number }> | null = null;
 
     try {
       // 1) getActivity: splitSummaries에서 INTERVAL_ACTIVE 원본 거리
-      const detail = await GC.getActivity({ activityId: String(a.activityId) }) as Record<string, unknown>;
+      const detail = await GC.getActivity({ activityId: a.activityId }) as unknown as Record<string, unknown>;
       const splitSummaries = detail?.splitSummaries as Array<{ distance?: number; duration?: number; splitType?: string }> | undefined;
 
       if (splitSummaries && splitSummaries.length > 0) {
@@ -144,7 +187,7 @@ export async function fetchGarminActivities(
       // 2) splits API: km별 랩 데이터 (편집 불가)
       try {
         const splitsUrl = `https://connectapi.garmin.com/activity-service/activity/${a.activityId}/splits`;
-        const splitsData = await GC.get(splitsUrl) as Record<string, unknown>;
+        const splitsData = await GC.get(splitsUrl) as unknown as Record<string, unknown>;
         const lapDTOs = splitsData?.lapDTOs as Array<{
           distance?: number; duration?: number; startTimeGMT?: string;
           averageSpeed?: number; maxSpeed?: number;
@@ -160,6 +203,35 @@ export async function fetchGarminActivities(
         }
       } catch {
         // splits API 실패 시 무시 (랩 데이터 없음)
+      }
+
+      // 3) details API: 포인트별 고도 데이터
+      try {
+        const detailsUrl = `https://connectapi.garmin.com/activity-service/activity/${a.activityId}/details`;
+        const detailsData = await GC.get(detailsUrl) as unknown as Record<string, unknown>;
+        const metrics = detailsData?.metricDescriptors as Array<{ metricsIndex: number; key: string }> | undefined;
+        const samples = detailsData?.activityDetailMetrics as Array<{ metrics: number[] }> | undefined;
+
+        if (metrics && samples) {
+          const elevIdx = metrics.find(m => m.key === "directElevation" || m.key === "elevation")?.metricsIndex;
+          const distIdx = metrics.find(m => m.key === "directDistance" || m.key === "sumDistance")?.metricsIndex;
+
+          if (elevIdx !== undefined && distIdx !== undefined) {
+            elevationData = samples
+              .filter(s => s.metrics[elevIdx] != null && s.metrics[distIdx] != null)
+              .map(s => ({
+                distance: Math.round((s.metrics[distIdx] / 1000) * 100) / 100, // km
+                elevation: Math.round(s.metrics[elevIdx] * 10) / 10, // m
+              }));
+            // 너무 많으면 샘플링 (최대 200포인트)
+            if (elevationData.length > 200) {
+              const step = Math.ceil(elevationData.length / 200);
+              elevationData = elevationData.filter((_, i) => i % step === 0);
+            }
+          }
+        }
+      } catch {
+        // details API 실패 시 무시
       }
     } catch (err) {
       console.warn(`Failed to get detail for activity ${a.activityId}:`, err);
@@ -181,8 +253,12 @@ export async function fetchGarminActivities(
       elevation: a.elevationGain ? Math.round(a.elevationGain * 10) / 10 : null,
       elevationLoss: a.elevationLoss ? Math.round(a.elevationLoss * 10) / 10 : null,
       laps,
+      elevationData,
     });
   }
 
-  return { activities };
+  // 토큰 export (DB에 저장용)
+  const exportedTokens = GC.exportToken() as unknown as GarminTokens;
+
+  return { activities, tokens: exportedTokens, loginUsed };
 }

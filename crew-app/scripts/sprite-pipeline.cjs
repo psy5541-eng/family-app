@@ -85,6 +85,7 @@ function parseArgs() {
       case "layer":
       case "batch":
       case "extract":
+      case "extract-hair":
         opts.command = args[i];
         break;
       case "--gender": opts.gender = args[++i]; break;
@@ -102,6 +103,8 @@ function parseArgs() {
         break;
       }
       case "--frame-size": opts.frameSize = parseInt(args[++i]); break;
+      case "--threshold": opts.threshold = parseInt(args[++i]); break;
+      case "--ymax": opts.ymax = parseFloat(args[++i]); break;
       case "--dry-run": opts.dryRun = true; break;
       default:
         if (!args[i].startsWith("--") && !opts.command) {
@@ -456,6 +459,100 @@ async function processExtract(opts) {
   console.log(`\n  영역 조정이 필요하면 스크립트의 regions 객체를 수정하세요.`);
 }
 
+// ── extract-hair 명령어: 대머리 vs 헤어 비교로 헤어만 추출 ──
+async function processExtractHair(opts) {
+  if (!opts.input || !opts.gender || !opts.action) {
+    console.error("사용법: sprite-pipeline.cjs extract-hair <헤어있는파일> --gender male|female --action idle|run");
+    console.error("  --base-file <맨몸파일>  (미지정 시 base/{action}-{gender}.png 사용)");
+    console.error("  --name <이름>          (미지정 시 'default')");
+    console.error("  --threshold <N>        (diff 임계값, 기본: 60)");
+    console.error("  --ymax <0~1>           (Y영역 상한 비율, 기본: 0.55)");
+    console.error("");
+    console.error("예시:");
+    console.error("  node scripts/sprite-pipeline.cjs extract-hair assets-raw/action/run-male2.png --gender male --action run");
+    console.error("  node scripts/sprite-pipeline.cjs extract-hair hair-female.png --gender female --action idle --name ponytail --ymax 0.6");
+    process.exit(1);
+  }
+
+  const hairedPath = path.resolve(opts.input);
+  if (!fs.existsSync(hairedPath)) {
+    console.error(`파일 없음: ${hairedPath}`);
+    process.exit(1);
+  }
+
+  // 대머리 베이스 파일 결정
+  const baldPath = opts.baseFile
+    ? path.resolve(opts.baseFile)
+    : path.join(ASSET_OUT, "base", `${opts.action}-${opts.gender}.png`);
+
+  if (!fs.existsSync(baldPath)) {
+    console.error(`대머리 베이스 파일 없음: ${baldPath}`);
+    console.error(`  → base 명령어로 먼저 생성하거나 --base-file 으로 지정하세요`);
+    process.exit(1);
+  }
+
+  const threshold = opts.threshold || 60;
+  const yMaxRatio = opts.ymax || 0.55;
+  const itemName = opts.name || "default";
+
+  console.log(`\n[EXTRACT-HAIR] ${opts.gender} ${opts.action}`);
+  console.log(`  대머리: ${path.basename(baldPath)}`);
+  console.log(`  헤어: ${path.basename(hairedPath)}`);
+  console.log(`  임계값: ${threshold}, Y상한: ${(yMaxRatio * 100).toFixed(0)}%`);
+
+  const [baldBuf, hairedBuf] = await Promise.all([
+    sharp(baldPath).raw().ensureAlpha().toBuffer({ resolveWithObject: true }),
+    sharp(hairedPath).raw().ensureAlpha().toBuffer({ resolveWithObject: true }),
+  ]);
+
+  if (baldBuf.info.width !== hairedBuf.info.width || baldBuf.info.height !== hairedBuf.info.height) {
+    console.error(`크기 불일치: 대머리(${baldBuf.info.width}x${baldBuf.info.height}) vs 헤어(${hairedBuf.info.width}x${hairedBuf.info.height})`);
+    process.exit(1);
+  }
+
+  const W = baldBuf.info.width;
+  const H = baldBuf.info.height;
+  const hairMaxY = Math.floor(H * yMaxRatio);
+
+  const result = Buffer.alloc(W * H * 4, 0);
+  let hairPixels = 0;
+
+  for (let y = 0; y < H; y++) {
+    if (y > hairMaxY) continue;
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const bR = baldBuf.data[i], bG = baldBuf.data[i + 1], bB = baldBuf.data[i + 2], bA = baldBuf.data[i + 3];
+      const hR = hairedBuf.data[i], hG = hairedBuf.data[i + 1], hB = hairedBuf.data[i + 2], hA = hairedBuf.data[i + 3];
+
+      const diff = Math.abs(bR - hR) + Math.abs(bG - hG) + Math.abs(bB - hB) + Math.abs(bA - hA);
+      if (diff > threshold) {
+        result[i] = hR;
+        result[i + 1] = hG;
+        result[i + 2] = hB;
+        result[i + 3] = hA;
+        hairPixels++;
+      }
+    }
+  }
+
+  const outDir = path.join(ASSET_OUT, "hair");
+  fs.mkdirSync(outDir, { recursive: true });
+  const outFile = `${itemName}-${opts.action}-${opts.gender}.png`;
+  const outPath = path.join(outDir, outFile);
+
+  if (opts.dryRun) {
+    console.log(`  [DRY] ${outFile} (${hairPixels}px 헤어)`);
+  } else {
+    await sharp(result, { raw: { width: W, height: H, channels: 4 } })
+      .png()
+      .toFile(outPath);
+    const stat = fs.statSync(outPath);
+    console.log(`  → ${outFile} (${(stat.size / 1024).toFixed(1)}KB, ${hairPixels}px 헤어)`);
+  }
+
+  console.log(`  완료! → ${outDir}/`);
+}
+
 // ── 도움말 ──
 function showHelp() {
   console.log(`
@@ -476,6 +573,14 @@ RunningCrew 캐릭터 에셋 파이프라인
     --action idle|run|walk             동작 (필수)
 
   batch         assets-raw/ 폴더 자동 일괄 처리
+
+  extract-hair <파일>  대머리 vs 헤어 비교로 헤어만 추출
+    --gender male|female    성별 (필수)
+    --action idle|run|walk  동작 (필수)
+    --name <이름>           아이템명 (기본: default)
+    --base-file <파일>      대머리 베이스 (기본: base/{action}-{gender}.png)
+    --threshold <N>         diff 임계값 (기본: 60)
+    --ymax <0~1>            Y영역 상한 비율 (기본: 0.55)
 
 공통 옵션:
   --cols <N>          열 수 (기본: 4)
@@ -526,6 +631,9 @@ async function main() {
       break;
     case "extract":
       await processExtract(opts);
+      break;
+    case "extract-hair":
+      await processExtractHair(opts);
       break;
     default:
       showHelp();

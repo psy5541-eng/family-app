@@ -5,6 +5,7 @@ import * as schema from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/session";
 import { fetchGarminActivities } from "@/lib/garmin/client";
 import { calculatePoints } from "@/lib/garmin/points";
+import { encryptToken } from "@/lib/garmin/crypto";
 
 // POST: 가민 동기화 실행
 export async function POST(request: NextRequest) {
@@ -27,25 +28,61 @@ export async function POST(request: NextRequest) {
     return Response.json({ success: false, error: "가민 계정이 연동되지 않았습니다." }, { status: 400 });
   }
 
-  try {
-    // 2. 가민에서 활동 데이터 가져오기
-    const sinceDate = garminAccount.lastSyncAt ?? undefined;
-    const { activities: garminActivities } = await fetchGarminActivities(
-      garminAccount.garminEmail,
-      garminAccount.encryptedPassword,
-      sinceDate
-    );
+  // 재인증 필요 상태 체크
+  if (garminAccount.status === "reauth_required") {
+    return Response.json({
+      success: false,
+      error: "가민 재연동이 필요합니다. 설정에서 가민 계정을 다시 연동해주세요.",
+      code: "REAUTH_REQUIRED",
+    }, { status: 401 });
+  }
 
-    if (garminActivities.length === 0) {
-      // lastSyncAt 업데이트
+  try {
+    // 2. 가민에서 활동 데이터 가져오기 (토큰 캐싱 사용)
+    const sinceDate = garminAccount.lastSyncAt ?? undefined;
+    let result;
+    try {
+      result = await fetchGarminActivities(
+        garminAccount.garminEmail,
+        garminAccount.encryptedPassword,
+        sinceDate,
+        garminAccount.encryptedOauth1,
+        garminAccount.encryptedOauth2,
+      );
+    } catch (authError) {
+      // 로그인 자체 실패 → 재인증 필요 상태로 변경
+      console.error("Garmin auth failed:", authError);
       await db
         .update(schema.garminAccounts)
-        .set({ lastSyncAt: new Date() })
+        .set({ status: "reauth_required", encryptedOauth1: null, encryptedOauth2: null, oauth2ExpiresAt: null })
+        .where(eq(schema.garminAccounts.id, garminAccount.id));
+      return Response.json({
+        success: false,
+        error: "가민 인증에 실패했습니다. 비밀번호가 변경되었을 수 있습니다. 설정에서 재연동해주세요.",
+        code: "REAUTH_REQUIRED",
+      }, { status: 401 });
+    }
+
+    const { activities: garminActivities, tokens, loginUsed } = result;
+
+    // 토큰 DB에 저장 (매 동기화 시 갱신)
+    const tokenUpdate: Record<string, unknown> = {
+      encryptedOauth1: encryptToken(tokens.oauth1),
+      encryptedOauth2: encryptToken(tokens.oauth2),
+      oauth2ExpiresAt: tokens.oauth2.expires_at ? new Date(tokens.oauth2.expires_at * 1000) : null,
+      status: "active",
+    };
+
+    if (garminActivities.length === 0) {
+      // lastSyncAt + 토큰 업데이트
+      await db
+        .update(schema.garminAccounts)
+        .set({ ...tokenUpdate, lastSyncAt: new Date() })
         .where(eq(schema.garminAccounts.id, garminAccount.id));
 
       return Response.json({
         success: true,
-        data: { synced: 0, totalPoints: 0 },
+        data: { synced: 0, totalPoints: 0, loginUsed },
       });
     }
 
@@ -103,6 +140,7 @@ export async function POST(request: NextRequest) {
         elevation: activity.elevation,
         elevationLoss: activity.elevationLoss,
         laps: activity.laps ? JSON.stringify(activity.laps) : null,
+        elevationData: activity.elevationData ? JSON.stringify(activity.elevationData) : null,
         pointsEarned: points,
         createdAt: now,
       });
@@ -149,10 +187,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. lastSyncAt 업데이트
+    // 7. lastSyncAt + 토큰 업데이트
     await db
       .update(schema.garminAccounts)
-      .set({ lastSyncAt: now })
+      .set({ ...tokenUpdate, lastSyncAt: now })
       .where(eq(schema.garminAccounts.id, garminAccount.id));
 
     return Response.json({

@@ -3,8 +3,9 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { getServerDb } from "@/lib/db/server";
 import * as schema from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/session";
-import { encryptPassword } from "@/lib/garmin/crypto";
+import { encryptPassword, encryptToken } from "@/lib/garmin/crypto";
 import { GarminConnect } from "garmin-connect";
+import type { GarminTokens } from "@/lib/garmin/client";
 
 // POST: 가민 계정 연동 (로그인 검증 후 저장)
 export async function POST(request: NextRequest) {
@@ -20,12 +21,14 @@ export async function POST(request: NextRequest) {
   }
 
   // 가민 로그인 검증 — 실패하면 저장하지 않음
+  let tokens: GarminTokens | null = null;
   try {
     const GC = new GarminConnect({
       username: body.garminEmail,
       password: body.garminPassword,
     });
     await GC.login();
+    tokens = GC.exportToken() as unknown as GarminTokens;
   } catch (error) {
     const msg = error instanceof Error ? error.message : "";
     if (msg.includes("MFA") || msg.includes("Ticket")) {
@@ -53,12 +56,20 @@ export async function POST(request: NextRequest) {
   const encrypted = encryptPassword(body.garminPassword);
   const now = new Date();
 
+  const tokenFields = tokens ? {
+    encryptedOauth1: encryptToken(tokens.oauth1),
+    encryptedOauth2: encryptToken(tokens.oauth2),
+    oauth2ExpiresAt: tokens.oauth2.expires_at ? new Date(tokens.oauth2.expires_at * 1000) : null,
+  } : {};
+
   if (existing) {
     await db
       .update(schema.garminAccounts)
       .set({
         garminEmail: body.garminEmail,
         encryptedPassword: encrypted,
+        ...tokenFields,
+        status: "active",
       })
       .where(eq(schema.garminAccounts.id, existing.id));
   } else {
@@ -67,6 +78,8 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       garminEmail: body.garminEmail,
       encryptedPassword: encrypted,
+      ...tokenFields,
+      status: "active",
       createdAt: now,
     });
   }

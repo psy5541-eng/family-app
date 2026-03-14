@@ -179,8 +179,8 @@ export default function LoginForm() {
 
           {/* 달리는 도트 캐릭터 2명 */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-0 items-end">
-            <CharacterAvatar gender="male" mode="run" fps={8} size={156} />
-            <CharacterAvatar gender="female" mode="run" fps={8} size={156} />
+            <CharacterAvatar gender="male" mode="run" fps={8} size={156} equipment={{ hair: "default" }} />
+            <CharacterAvatar gender="female" mode="run" fps={8} size={156} equipment={{ hair: "default" }} />
           </div>
         </div>
       </div>

@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     .select({
       garminEmail: schema.garminAccounts.garminEmail,
       lastSyncAt: schema.garminAccounts.lastSyncAt,
+      status: schema.garminAccounts.status,
     })
     .from(schema.garminAccounts)
     .where(eq(schema.garminAccounts.userId, user.id))
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
       connected: true,
       garminEmail: account.garminEmail,
       lastSyncAt: account.lastSyncAt?.toISOString() ?? null,
+      status: account.status,
     },
   });
 }

@@ -34,6 +34,10 @@ export const garminAccounts = sqliteTable("garmin_accounts", {
     .references(() => users.id, { onDelete: "cascade" }),
   garminEmail: text("garmin_email").notNull(),
   encryptedPassword: text("encrypted_password").notNull(), // AES-256
+  encryptedOauth1: text("encrypted_oauth1"), // AES-256 encrypted OAuth1 token JSON
+  encryptedOauth2: text("encrypted_oauth2"), // AES-256 encrypted OAuth2 token JSON
+  oauth2ExpiresAt: integer("oauth2_expires_at", { mode: "timestamp" }),
+  status: text("status").notNull().default("active"), // active | reauth_required
   lastSyncAt: integer("last_sync_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
@@ -56,6 +60,7 @@ export const activities = sqliteTable("activities", {
   elevation: real("elevation"), // 누적 상승 고도 (m)
   elevationLoss: real("elevation_loss"), // 하강 고도 (m)
   laps: text("laps"), // JSON: [{lapNum, distance, duration, pace}]
+  elevationData: text("elevation_data"), // JSON: [{distance, elevation}]
   pointsEarned: integer("points_earned").default(0),
   visibility: text("visibility", { enum: ["public", "private"] }).default("public").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),

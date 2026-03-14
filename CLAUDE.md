@@ -135,7 +135,8 @@ UPDATE garmin_accounts SET last_sync_at = NULL WHERE user_id = '<userId>';
 ## 미해결 이슈
 - shop/route.ts: `character` 변수 중복 선언 빌드 에러
 - Character selection flow: 신규 유저 unknown → /character-select 이동
-- Character asset processing: asset_image/ 폴더의 새 의류/신발 파일 적용 필요
+- idle 헤어 에셋 아직 미적용 (run만 완료)
+- 상의/하의/신발 레이어 에셋 아직 미작업
 
 ## 진행상황 (2026-03-12)
 
@@ -153,6 +154,60 @@ UPDATE garmin_accounts SET last_sync_at = NULL WHERE user_id = '<userId>';
 - splits API lapDTOs: km별 랩 데이터 정상 수신 확인
 - 동기화 시 laps 데이터 DB 저장 + 상세 페이지 렌더링 정상
 - LoadingOverlay 스피너 + 메시지 + 클릭 차단 정상
+
+## 진행상황 (2026-03-13)
+
+### 완료
+- 캐릭터 페이퍼돌 레이어 시스템 구축 (CharacterAvatar 컴포넌트)
+  - 레이어 순서: base(대머리) → shoes → bottom → top → hair → hat
+  - 스프라이트: 256x64 PNG (4프레임 × 64x64), CSS steps(4) 애니메이션
+- 로그인 페이지 남녀 캐릭터에 run 헤어 적용 (`equipment={{ hair: "default" }}`)
+- sprite-pipeline.cjs에 `extract-hair` 명령어 추가 (대머리 vs 헤어 diff 추출)
+- run 헤어 에셋 완료 (한뭉탱이 스타일 — 얼굴+머리 통이미지)
+  - `public/assets/character/hair/default-run-male.png` (수작업)
+  - `public/assets/character/hair/default-run-female.png` (수작업)
+- PIXELLAB_PROMPTS.md 작성 (PixelLab 프롬프트 + Gemini 분리 워크플로우)
+- Gemini 이미지 → 256x64 nearest-neighbor 리사이즈 다수 처리
+
+### 결정사항
+- 머리카락 분리: 섬세하게 따는 것 비현실적 → **한뭉탱이(얼굴+머리 통이미지)로 확정**
+- 에셋 생성 워크플로우: PixelLab 스프라이트 → Gemini로 부위 분리 → Claude로 리사이즈/후처리
+- PixelPartExtractor(Lang-SAM 웹앱) 검토 → 64x64에서 비실용적, 기각
+
+### 미커밋 변경사항 (커밋 필요!)
+- LoginForm.tsx: 남녀 헤어 equipment 추가
+- sprite-pipeline.cjs: extract-hair 명령어 추가
+- public/assets/character/hair/: run 헤어 남녀
+- assets-raw/hair/: Gemini 원본 + 리사이즈 파일들
+- PIXELLAB_PROMPTS.md (에셋 제작 가이드)
+
+## 진행상황 (2026-03-14)
+
+### 완료
+- **가민 세션 캐싱 (OAuth 토큰)**
+  - garmin_accounts 테이블에 encrypted_oauth1, encrypted_oauth2, oauth2_expires_at, status 컬럼 추가
+  - 첫 로그인 시 토큰 export → AES 암호화 → DB 저장
+  - 이후 동기화 시 저장된 토큰으로 재사용 (로그인 생략)
+  - 토큰 만료/무효 시 비밀번호로 재로그인 → 새 토큰 저장
+  - 재로그인도 실패 시 status='reauth_required'로 변경
+  - **rate limit 위험 사실상 제거** (로그인 대신 토큰 사용)
+- **대시보드 가민 연동 팝업**
+  - 미연동 유저: 앱 접속 시 "가민 연동하기" 레이어 팝업 (나중에/연동하러가기)
+  - 재인증 필요: 빨간 배너 "가민 재연동이 필요합니다"
+  - 연동+정상: 앱 접속 시 자동 동기화 (결과 배너 표시)
+- **고도 차트 (SVG area chart)**
+  - details API로 포인트별 고도 데이터 수집 (distance/elevation)
+  - activities 테이블에 elevation_data TEXT 컬럼 추가
+  - 동기화 시 최대 200포인트 샘플링하여 저장
+  - 활동 상세 페이지 하단에 녹색 area chart 표시
+- **랩 테이블 + 탭 전환**
+  - 페이스 영역에 "차트/테이블" 탭 전환 UI
+  - 테이블: 랩번호/시간/거리/평균페이스 (가민앱 스타일)
+  - 최고 랩 빨간색 하이라이트
+
+### DB 마이그레이션
+- `0004_garmin_oauth_tokens.sql`: encrypted_oauth1, encrypted_oauth2, oauth2_expires_at, status
+- `0005_activities_elevation_data.sql`: elevation_data
 
 ### 테스트 계정
 - App: psy5541@gmail.com / userId: 5ba052bb-ce0b-49be-8289-7447d2f242a5
