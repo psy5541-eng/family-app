@@ -86,6 +86,7 @@ function parseArgs() {
       case "batch":
       case "extract":
       case "extract-hair":
+      case "transfer-outfit":
         opts.command = args[i];
         break;
       case "--gender": opts.gender = args[++i]; break;
@@ -553,6 +554,180 @@ async function processExtractHair(opts) {
   console.log(`  완료! → ${outDir}/`);
 }
 
+// ── transfer-outfit 명령어: PixelLab API로 옷 입히기 + 추출 ──
+async function processTransferOutfit(opts) {
+  if (!opts.input || !opts.name) {
+    console.error("사용법: sprite-pipeline.cjs transfer-outfit <옷참조이미지> --name <아이템명>");
+    console.error("  예: node scripts/sprite-pipeline.cjs transfer-outfit assets-raw/test/123.png --name white-tshirt");
+    console.error("");
+    console.error("  4개 베이스(run-female, run-male, idle-female, idle-male)에 순차적으로 적용합니다.");
+    console.error("  결과는 public/assets/character/top/{name}-{action}-{gender}.png 에 저장됩니다.");
+    process.exit(1);
+  }
+
+  const refPath = path.resolve(opts.input);
+  if (!fs.existsSync(refPath)) {
+    console.error(`파일 없음: ${refPath}`);
+    process.exit(1);
+  }
+
+  const API_KEY = process.env.PIXELLAB_API_KEY || "71dcbf1f-33d5-41f8-bcfd-b48c8cbcbfff";
+  let refMeta = await sharp(refPath).metadata();
+  let refBuf;
+  // 참조 이미지 256px 이하로 자동 리사이즈
+  if (refMeta.width > 256 || refMeta.height > 256) {
+    console.log(`  참조 이미지 ${refMeta.width}x${refMeta.height} → 256px 리사이즈`);
+    refBuf = await sharp(refPath).resize(256, 256, { fit: "inside" }).png().toBuffer();
+    refMeta = await sharp(refBuf).metadata();
+  } else {
+    refBuf = fs.readFileSync(refPath);
+  }
+
+  const bases = [
+    { path: path.join(ASSET_OUT, "base", "run-female.png"), action: "run", gender: "female" },
+    { path: path.join(ASSET_OUT, "base", "run-male.png"), action: "run", gender: "male" },
+    { path: path.join(ASSET_OUT, "base", "idle-female.png"), action: "idle", gender: "female" },
+    { path: path.join(ASSET_OUT, "base", "idle-male.png"), action: "idle", gender: "male" },
+  ];
+
+  function isClothingColor(r, g, b) {
+    // 피부색(warm peach tones)만 제외, 나머지는 전부 옷으로 판단
+    const isSkin = r > 160 && g > 100 && b > 80 && (r - b) > 30;
+    const isPinkSkin = r > 120 && r < 220 && g < 120 && b < 120 && (r - g) > 20 && (r - b) > 20;
+    return !isSkin && !isPinkSkin;
+  }
+
+  for (const base of bases) {
+    if (!fs.existsSync(base.path)) {
+      console.log(`  SKIP: ${base.path} (파일 없음)`);
+      continue;
+    }
+    // --gender 옵션으로 특정 성별만 처리
+    if (opts.gender && base.gender !== opts.gender) {
+      console.log(`  SKIP: ${base.action}-${base.gender} (--gender ${opts.gender})`);
+      continue;
+    }
+
+    const label = `${base.action}-${base.gender}`;
+    console.log(`\n[TRANSFER] ${label}`);
+
+    // Step 1: API 호출
+    const meta = await sharp(base.path).metadata();
+    const fc = Math.round(meta.width / 64);
+    const frames = [];
+    for (let i = 0; i < fc; i++) {
+      const f = await sharp(base.path).extract({ left: i * 64, top: 0, width: 64, height: 64 }).png().toBuffer();
+      frames.push({ image: { type: "base64", base64: f.toString("base64"), format: "png" }, size: { width: 64, height: 64 } });
+    }
+
+    const resp = await fetch("https://api.pixellab.ai/v2/transfer-outfit-v2", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reference_image: { image: { type: "base64", base64: refBuf.toString("base64"), format: "png" }, size: { width: refMeta.width, height: refMeta.height } },
+        frames,
+        image_size: { width: 64, height: 64 },
+      }),
+    });
+    const d = await resp.json();
+    if (!d.background_job_id) {
+      console.log(`  ERROR: ${JSON.stringify(d).substring(0, 200)}`);
+      continue;
+    }
+    console.log(`  submitted: ${d.background_job_id}`);
+
+    // Step 2: 폴링
+    let transferBufs = null;
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 10000));
+      const pr = await fetch(`https://api.pixellab.ai/v2/background-jobs/${d.background_job_id}`, {
+        headers: { Authorization: `Bearer ${API_KEY}` },
+      });
+      const pd = await pr.json();
+      const prog = (pd.last_response?.progress || 0).toFixed(2);
+      process.stdout.write(`  poll ${i + 1}: ${pd.status} ${prog}\r`);
+
+      if (pd.status === "completed") {
+        console.log(`  poll ${i + 1}: completed!          `);
+        const imgs = pd.last_response.images || (pd.last_response.image ? [pd.last_response.image] : []);
+        transferBufs = [];
+        for (const img of imgs) {
+          const raw = Buffer.from(img.base64, "base64");
+          const png = img.type === "rgba_bytes"
+            ? await sharp(raw, { raw: { width: img.width, height: img.height, channels: 4 } }).png().toBuffer()
+            : raw;
+          transferBufs.push(png);
+        }
+        break;
+      }
+      if (pd.status === "failed") {
+        console.log(`  FAILED`);
+        break;
+      }
+    }
+
+    if (!transferBufs || transferBufs.length === 0) {
+      console.log(`  결과 없음, 스킵`);
+      continue;
+    }
+
+    // 전체 결과 저장 (test/)
+    const testDir = path.join(ASSET_RAW, "test");
+    fs.mkdirSync(testDir, { recursive: true });
+    const transferSheet = await sharp({
+      create: { width: transferBufs.length * 64, height: 64, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    }).composite(transferBufs.map((b, i) => ({ input: b, left: i * 64, top: 0 }))).png().toBuffer();
+    fs.writeFileSync(path.join(testDir, `transfer-${opts.name}-${label}.png`), transferSheet);
+
+    // Step 3: 옷 추출 (base와 diff)
+    const baseRaws = [];
+    for (let i = 0; i < fc; i++) {
+      baseRaws.push(await sharp(base.path).extract({ left: i * 64, top: 0, width: 64, height: 64 }).raw().toBuffer());
+    }
+
+    const extractedBufs = [];
+    for (let fi = 0; fi < transferBufs.length; fi++) {
+      const srcRaw = await sharp(transferBufs[fi]).raw().toBuffer();
+      const baseRaw = baseRaws[fi] || baseRaws[0];
+
+      let minY = 64, maxY = 0;
+      for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++)
+        if (baseRaw[(y * 64 + x) * 4 + 3] > 128) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
+      const ch = maxY - minY;
+      const sY = minY + Math.floor(ch * 0.42);
+      const eY = minY + Math.floor(ch * 0.75);
+
+      const extracted = Buffer.alloc(64 * 64 * 4, 0);
+      for (let y = sY; y <= eY; y++) {
+        for (let x = 0; x < 64; x++) {
+          const idx = (y * 64 + x) * 4;
+          const sa = srcRaw[idx + 3], ba = baseRaw[idx + 3];
+          if (sa < 128 || ba < 128) continue;
+          const sr = srcRaw[idx], sg = srcRaw[idx + 1], sb = srcRaw[idx + 2];
+          const br = baseRaw[idx], bg = baseRaw[idx + 1], bb = baseRaw[idx + 2];
+          const diff = Math.abs(sr - br) + Math.abs(sg - bg) + Math.abs(sb - bb);
+          if (diff > 30 && isClothingColor(sr, sg, sb)) {
+            extracted[idx] = sr; extracted[idx + 1] = sg; extracted[idx + 2] = sb; extracted[idx + 3] = sa;
+          }
+        }
+      }
+      extractedBufs.push(await sharp(extracted, { raw: { width: 64, height: 64, channels: 4 } }).png().toBuffer());
+    }
+
+    // Step 4: top/ 에 저장
+    const outDir = path.join(ASSET_OUT, "top");
+    fs.mkdirSync(outDir, { recursive: true });
+    const outFile = `${opts.name}-${label}.png`;
+    const combined = await sharp({
+      create: { width: extractedBufs.length * 64, height: 64, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    }).composite(extractedBufs.map((b, i) => ({ input: b, left: i * 64, top: 0 }))).png().toBuffer();
+    fs.writeFileSync(path.join(outDir, outFile), combined);
+    console.log(`  → top/${outFile}`);
+  }
+
+  console.log(`\n완료! public/assets/character/top/${opts.name}-*.png 생성됨`);
+}
+
 // ── 도움말 ──
 function showHelp() {
   console.log(`
@@ -573,6 +748,11 @@ RunningCrew 캐릭터 에셋 파이프라인
     --action idle|run|walk             동작 (필수)
 
   batch         assets-raw/ 폴더 자동 일괄 처리
+
+  transfer-outfit <옷이미지>  PixelLab API로 옷 입히기 + top 레이어 추출
+    --name <이름>              아이템명 (필수, 예: white-tshirt)
+    → 4개 베이스(run/idle × male/female) 순차 처리
+    → top/{name}-{action}-{gender}.png 자동 생성
 
   extract-hair <파일>  대머리 vs 헤어 비교로 헤어만 추출
     --gender male|female    성별 (필수)
@@ -634,6 +814,9 @@ async function main() {
       break;
     case "extract-hair":
       await processExtractHair(opts);
+      break;
+    case "transfer-outfit":
+      await processTransferOutfit(opts);
       break;
     default:
       showHelp();

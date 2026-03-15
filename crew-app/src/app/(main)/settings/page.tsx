@@ -326,7 +326,7 @@ export default function SettingsPage() {
           {/* 캐릭터 아바타 */}
           <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center">
             {characterBase !== "unknown" ? (
-              <CharacterAvatar gender={characterBase} mode="idle" size={56} equipment={{ top: "default", bottom: "default", shoes: "default" }} />
+              <CharacterAvatar gender={characterBase} mode="idle" size={56} equipment={{ top: "white-tshirt", bottom: "default", shoes: "default" }} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xl font-semibold text-gray-500 dark:text-gray-300">
                 {user?.nickname?.charAt(0)?.toUpperCase() ?? "?"}

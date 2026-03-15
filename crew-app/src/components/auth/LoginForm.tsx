@@ -36,6 +36,13 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showAutoLoginPrompt, setShowAutoLoginPrompt] = useState(false);
 
+  // 이미 로그인 상태면 대시보드로 리다이렉트
+  useEffect(() => {
+    if (authToken) {
+      getPostLoginRoute(authToken).then((r) => router.replace(r));
+    }
+  }, [authToken, router]);
+
   // 소셜 로그인 콜백 처리 (?token=xxx)
   useEffect(() => {
     const callbackToken = searchParams.get("token");
@@ -179,8 +186,8 @@ export default function LoginForm() {
 
           {/* 달리는 도트 캐릭터 2명 */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-0 items-end">
-            <CharacterAvatar gender="male" mode="run" fps={8} size={156} equipment={{ hair: "default" }} />
-            <CharacterAvatar gender="female" mode="run" fps={8} size={156} equipment={{ hair: "default" }} />
+            <CharacterAvatar gender="male" mode="run" fps={8} size={156} equipment={{ hair: "default", top: "white-tshirt" }} />
+            <CharacterAvatar gender="female" mode="run" fps={8} size={156} equipment={{ hair: "default", top: "white-tshirt" }} />
           </div>
         </div>
       </div>
