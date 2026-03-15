@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import type { Activity } from "@/types/db";
@@ -161,15 +161,33 @@ function LapSection({ laps, fastestPace, slowestPace }: {
 
 // ── 고도 차트 (SVG area chart) ──
 function ElevationChart({ data }: { data: ElevationPoint[] }) {
+  const [touchIdx, setTouchIdx] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  // ── 2) 터치 인터랙션 (hooks must be before early return) ──
+  const maxDist = data.length >= 2 ? data[data.length - 1].distance : 0;
+  const handleTouch = useCallback((clientX: number) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const targetDist = ratio * maxDist;
+    let closest = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < data.length; i++) {
+      const diff = Math.abs(data[i].distance - targetDist);
+      if (diff < minDiff) { minDiff = diff; closest = i; }
+    }
+    setTouchIdx(closest);
+  }, [data, maxDist]);
+
   if (data.length < 2) return null;
 
   const minElev = Math.min(...data.map(d => d.elevation));
   const maxElev = Math.max(...data.map(d => d.elevation));
-  const maxDist = data[data.length - 1].distance;
   const elevRange = maxElev - minElev || 1;
 
   const W = 360;
-  const H = 120;
+  const H = 140;
   const PAD_TOP = 10;
   const PAD_BOTTOM = 25;
   const chartH = H - PAD_TOP - PAD_BOTTOM;
@@ -177,63 +195,130 @@ function ElevationChart({ data }: { data: ElevationPoint[] }) {
   const toX = (dist: number) => (dist / maxDist) * W;
   const toY = (elev: number) => PAD_TOP + chartH - ((elev - minElev) / elevRange) * chartH;
 
-  const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"}${toX(d.distance).toFixed(1)},${toY(d.elevation).toFixed(1)}`).join(" ");
+  // ── 4) 구간별 오르막/내리막 색상 세그먼트 ──
+  const segments: { path: string; color: string }[] = [];
+  for (let i = 0; i < data.length - 1; i++) {
+    const x1 = toX(data[i].distance).toFixed(1);
+    const y1 = toY(data[i].elevation).toFixed(1);
+    const x2 = toX(data[i + 1].distance).toFixed(1);
+    const y2 = toY(data[i + 1].elevation).toFixed(1);
+    const diff = data[i + 1].elevation - data[i].elevation;
+    const color = diff > 2 ? "#ef4444" : diff < -2 ? "#3b82f6" : "#9ca3af";
+    segments.push({ path: `M${x1},${y1} L${x2},${y2}`, color });
+  }
+
+  // ── 1) 고도별 다색 그라데이션 (초록 → 주황 → 빨강) ──
+  const elevStops = data.map(d => (d.elevation - minElev) / elevRange);
+  const avgRatio = elevStops.reduce((a, b) => a + b, 0) / elevStops.length;
+  const areaColor1 = avgRatio > 0.6 ? "#ef4444" : avgRatio > 0.3 ? "#f97316" : "#22c55e";
+  const areaColor2 = "#22c55e";
+
+  const linePath = data.map((d, i) =>
+    `${i === 0 ? "M" : "L"}${toX(d.distance).toFixed(1)},${toY(d.elevation).toFixed(1)}`
+  ).join(" ");
   const areaPath = `${linePath} L${W},${PAD_TOP + chartH} L0,${PAD_TOP + chartH} Z`;
 
-  // Y축 레이블 (3개)
   const yLabels = [minElev, minElev + elevRange / 2, maxElev].map(v => Math.round(v));
 
-  // X축 레이블 (시작, 중간, 끝)
-  const xLabels = [0, maxDist / 2, maxDist].map(v => v.toFixed(1));
+  const xCount = 5;
+  const xLabels = Array.from({ length: xCount }, (_, i) => ((maxDist / (xCount - 1)) * i).toFixed(1));
+
+  const touchPoint = touchIdx !== null ? data[touchIdx] : null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 mt-3">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">고도</h3>
-        <div className="flex gap-3 text-[11px] text-gray-500 dark:text-gray-400">
-          <span>{Math.round(minElev)}m 최소</span>
-          <span>{Math.round(maxElev)}m 최대</span>
-        </div>
+        {touchPoint ? (
+          <div className="flex gap-3 text-[11px] font-medium">
+            <span className="text-blue-500">{touchPoint.distance.toFixed(1)}km</span>
+            <span className="text-orange-500">{Math.round(touchPoint.elevation)}m</span>
+          </div>
+        ) : (
+          <div className="flex gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+            <span>↑ {Math.round(maxElev)}m</span>
+            <span>↓ {Math.round(minElev)}m</span>
+          </div>
+        )}
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#22c55e" stopOpacity="0.1" />
-          </linearGradient>
-        </defs>
-        {/* 배경 격자 */}
-        {yLabels.map((v, i) => (
-          <g key={i}>
-            <line
-              x1="0" x2={W}
-              y1={toY(v)} y2={toY(v)}
-              stroke="currentColor" className="text-gray-200 dark:text-gray-700" strokeWidth="0.5"
-            />
-            <text x={W - 2} y={toY(v) - 3} textAnchor="end" className="text-gray-400 dark:text-gray-500" fontSize="8" fill="currentColor">
-              {v}m
+      {/* 범례 */}
+      <div className="flex gap-3 mb-2 text-[10px] text-gray-500 dark:text-gray-400">
+        <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-red-500 rounded-full inline-block" />오르막</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-blue-500 rounded-full inline-block" />내리막</span>
+      </div>
+      <div className="relative">
+        {/* ── 3) 3D 그림자 (blur) ── */}
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full absolute top-1 left-0 opacity-20 blur-sm pointer-events-none" preserveAspectRatio="none">
+          <path d={areaPath} fill="#000" />
+        </svg>
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full relative touch-none"
+          preserveAspectRatio="none"
+          onTouchStart={(e) => handleTouch(e.touches[0].clientX)}
+          onTouchMove={(e) => { e.preventDefault(); handleTouch(e.touches[0].clientX); }}
+          onTouchEnd={() => setTouchIdx(null)}
+          onMouseMove={(e) => handleTouch(e.clientX)}
+          onMouseLeave={() => setTouchIdx(null)}
+        >
+          <defs>
+            {/* ── 1) 고도별 컬러 그라데이션 ── */}
+            <linearGradient id="elevGradMulti" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={areaColor1} stopOpacity="0.7" />
+              <stop offset="50%" stopColor={areaColor2} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={areaColor2} stopOpacity="0.05" />
+            </linearGradient>
+          </defs>
+          {/* 배경 격자 */}
+          {yLabels.map((v, i) => (
+            <g key={i}>
+              <line
+                x1="0" x2={W}
+                y1={toY(v)} y2={toY(v)}
+                stroke="currentColor" className="text-gray-200 dark:text-gray-700" strokeWidth="0.5" strokeDasharray="4,4"
+              />
+              <text x={W - 2} y={toY(v) - 3} textAnchor="end" className="text-gray-400 dark:text-gray-500" fontSize="7" fill="currentColor">
+                {v}m
+              </text>
+            </g>
+          ))}
+          {/* 면적 */}
+          <path d={areaPath} fill="url(#elevGradMulti)" />
+          {/* ── 4) 구간별 오르막/내리막 컬러 라인 ── */}
+          {segments.map((seg, i) => (
+            <path key={i} d={seg.path} fill="none" stroke={seg.color} strokeWidth="1.5" strokeLinecap="round" />
+          ))}
+          {/* ── 2) 터치 포인터 ── */}
+          {touchPoint && (
+            <>
+              <line
+                x1={toX(touchPoint.distance)} x2={toX(touchPoint.distance)}
+                y1={PAD_TOP} y2={PAD_TOP + chartH}
+                stroke="#f97316" strokeWidth="1" strokeDasharray="3,3" opacity="0.8"
+              />
+              <circle
+                cx={toX(touchPoint.distance)} cy={toY(touchPoint.elevation)}
+                r="4" fill="#f97316" stroke="white" strokeWidth="1.5"
+              />
+            </>
+          )}
+          {/* X축 레이블 */}
+          {xLabels.map((v, i) => (
+            <text
+              key={i}
+              x={toX(parseFloat(v))}
+              y={H - 5}
+              textAnchor={i === 0 ? "start" : i === xLabels.length - 1 ? "end" : "middle"}
+              className="text-gray-400 dark:text-gray-500"
+              fontSize="7"
+              fill="currentColor"
+            >
+              {v}km
             </text>
-          </g>
-        ))}
-        {/* 면적 */}
-        <path d={areaPath} fill="url(#elevGrad)" />
-        {/* 라인 */}
-        <path d={linePath} fill="none" stroke="#22c55e" strokeWidth="1.5" />
-        {/* X축 레이블 */}
-        {xLabels.map((v, i) => (
-          <text
-            key={i}
-            x={toX(parseFloat(v))}
-            y={H - 5}
-            textAnchor={i === 0 ? "start" : i === xLabels.length - 1 ? "end" : "middle"}
-            className="text-gray-400 dark:text-gray-500"
-            fontSize="8"
-            fill="currentColor"
-          >
-            {v}km
-          </text>
-        ))}
-      </svg>
+          ))}
+        </svg>
+      </div>
     </div>
   );
 }
